@@ -70,11 +70,34 @@ Count "r" word by word: "bright" has 1, "red" has 1, "barrel" has 2 (b-a-r-r-e-l
 # eval prompts exceed it, with IMPROVED_SHORTENED all 39 string_insertion ones do. With this one the longest is 453.
 IMPROVED_COMPACT = IMPROVED_SHORTENED.split("\nExample:\n")[0]
 
+# Short and blunt, aimed at what the runs got wrong: several <think>/<answer> blocks or text after </answer>
+# (base_conversion), thinking until the 512-token eval cap (maze, with IMPROVED_COMPACT), and a bare word
+# with no tags whenever the question asks for "only the word" (family_relationships).
+CONCISE = """Reply in exactly this format and nothing else:
+<think>
+brief step-by-step reasoning
+</think>
+<answer>final answer only</answer>
+
+Rules:
+1. Exactly one <think> block, then exactly one <answer> block. Never repeat a tag. Write nothing after </answer>.
+2. Keep the reasoning brief: only the steps needed to get the answer, then check it once.
+3. Inside <answer>, write only the final answer in the exact form the question asks for (a number, a word, a list, a string). Even when the question says to reply with just a word or number, put it inside <answer> </answer>.
+"""
+
+# CONCISE with an explicit length budget for the reasoning
+CONCISE_LIMIT = CONCISE.replace(
+    "2. Keep the reasoning brief: only the steps needed to get the answer, then check it once.",
+    "2. Keep the reasoning brief (at most about 120 words): only the steps needed to get the answer, then check it once.",
+)
+
 SYSTEM_PROMPTS = {
     "DeepSeekZero": DEEPSEEK_ZERO,
     "Improved": IMPROVED,
     "ImprovedShortened": IMPROVED_SHORTENED,
     "ImprovedCompact": IMPROVED_COMPACT,
+    "Concise": CONCISE,
+    "ConciseLimit": CONCISE_LIMIT,
 }
 
 
@@ -84,7 +107,7 @@ if __name__ == "__main__":
     from .formatting import format_issues
 
     assert DEEPSEEK_ZERO == RG_PROMPTS["DeepSeekZero"], "hosted prompt drifted from reasoning-gym's"
-    for name in ("Improved", "ImprovedShortened", "ImprovedCompact"):
+    for name in ("Improved", "ImprovedShortened", "ImprovedCompact", "Concise", "ConciseLimit"):
         prompt = SYSTEM_PROMPTS[name]
         template = prompt.split("nothing else:\n")[1].split("\n\n")[0]
         example = prompt.split("Assistant:\n")[1] if "Assistant:\n" in prompt else template
