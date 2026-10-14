@@ -71,7 +71,7 @@ max_completion_length: 384
 
 # Model behavior
 temperature: 1.0  # training temperature (more exploration; at 0.6 family_relationships rollouts almost never used tags)
-eval_temperature: 0.2  # eval temperature (0 = greedy/deterministic)
+eval_temperature: 0.0  # eval temperature (0 = greedy/deterministic, so evals differ only because the model did)
 
 # LORA
 use_peft: false
@@ -93,7 +93,7 @@ checkpoint_path: null      # Path to trained model/checkpoint for eval-only mode
 # Fixed evaluation settings
 eval_num_samples: 200
 eval_num_examples_to_print: 5
-fixed_eval_steps: 100  # Run fixed eval every N steps
+fixed_eval_steps: 20  # Run fixed eval every N steps (a multiple of logging_steps: evals run on logging steps)
 
 # Variance logging (helps diagnose exploration)
 log_reward_variance: true
