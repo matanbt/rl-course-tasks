@@ -1,0 +1,628 @@
+<title>Reasoning Gym Samples</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: sticky header + task tabs; run overview (tiles + charts) or filter rail beside sample cards; stacks below 860px */
+:root {
+  color-scheme: light;
+  --bg: #F3F5F8; --surface: #FFFFFF; --ink: #17202C; --muted: #5B6779; --line: #DCE2EA; --grid: #E8ECF1;
+  --accent: #3355D1; --accent-soft: #E5EBFB; --good: #1E8257; --good-soft: #E1F3EA;
+  --bad: #BB3A33; --bad-soft: #FBE7E5; --code: #F7F8FB; --wall: #2B3442; --open: #E9EDF3;
+  --think: #6B5A2E; --think-bg: #FBF6E9;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100; --s5: #e87ba4; --s6: #008300; --s7: #6250d6; --s8: #e34948;
+  --f-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--f-body); }
+.wrap { max-width: 1280px; margin: 0 auto; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+header.top { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); border-bottom: 1px solid var(--line); }
+.brand { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 8px 24px; padding-block: 18px 10px; }
+h1 { font: 700 26px/1.1 var(--f-display); letter-spacing: -0.01em; margin: 0; text-wrap: balance; }
+h2 { font: 700 17px/1.2 var(--f-display); margin: 0; }
+.brand p { margin: 0; color: var(--muted); font-size: 13px; }
+
+nav.tabs { display: flex; gap: 4px; overflow-x: auto; scrollbar-width: thin; }
+.tab { flex: none; border: 0; background: none; color: var(--muted); font: 500 14px var(--f-body); padding: 10px 14px 11px; border-bottom: 2px solid transparent; cursor: pointer; display: flex; gap: 8px; align-items: center; }
+.tab:hover { color: var(--ink); }
+.tab[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab .n { font: 400 11px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.tab .tag { font: 600 10px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }
+.sw { width: 9px; height: 9px; border-radius: 2px; flex: none; display: inline-block; }
+
+.sysprompt { margin: 0 0 12px; padding: 12px 14px; background: var(--code); border: 1px solid var(--line); border-radius: 6px; font: 12px/1.6 var(--f-mono); white-space: pre-wrap; color: var(--muted); }
+
+main { display: grid; grid-template-columns: 270px minmax(0, 1fr); gap: 28px; padding-block: 20px 60px; }
+@media (max-width: 860px) { main { grid-template-columns: minmax(0, 1fr); } aside { position: static !important; max-height: none !important; } }
+
+aside { position: sticky; top: 130px; align-self: start; max-height: calc(100vh - 150px); overflow-y: auto; display: flex; flex-direction: column; gap: 18px; padding-right: 4px; }
+.fgroup { display: flex; flex-direction: column; gap: 7px; }
+.flabel { display: flex; justify-content: space-between; font: 600 11px var(--f-mono); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.flabel button { font: 500 11px var(--f-body); text-transform: none; letter-spacing: 0; }
+.chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.chip { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 999px; padding: 3px 10px; font: 13px var(--f-body); cursor: pointer; display: inline-flex; gap: 6px; align-items: baseline; }
+.chip .c { font: 11px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.chip[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent); }
+.chip[aria-pressed="true"] .c { color: var(--accent); }
+.chip.zero { opacity: .45; }
+.range { display: flex; gap: 6px; align-items: center; }
+.range input { width: 100%; min-width: 0; }
+.range span { color: var(--muted); font-size: 12px; }
+input[type="number"], input[type="search"] { font: 13px var(--f-mono); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+input[type="search"] { font-family: var(--f-body); font-size: 14px; width: 100%; }
+select { font: 13px var(--f-body); color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; width: 100%; }
+.group { display: flex; flex-direction: column; gap: 8px; }
+.ghead { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font: 12px var(--f-mono); color: var(--muted); }
+.ghead b { color: var(--ink); font-weight: 600; }
+.pill.warn { background: #FCEFD9; color: #8A5300; }
+details.settings { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 12px 16px; }
+details.settings summary { cursor: pointer; font: 700 15px var(--f-display); }
+details.settings dl { margin: 12px 0 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr)); gap: 6px 24px; }
+details.settings dl div { display: flex; gap: 10px; justify-content: space-between; border-bottom: 1px solid var(--grid); padding-block: 3px; min-width: 0; }
+details.settings dt { font: 12px var(--f-mono); color: var(--muted); }
+details.settings dd { margin: 0; font: 12px var(--f-mono); text-align: right; overflow-wrap: anywhere; min-width: 0; }
+.hint { color: var(--muted); font-size: 11px; font-family: var(--f-mono); }
+.linkbtn { border: 0; background: none; color: var(--accent); cursor: pointer; padding: 0; font: 500 13px var(--f-body); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.toolbar { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; margin-bottom: 14px; }
+.count { font: 500 15px var(--f-body); }
+.count b { font: 700 20px var(--f-display); font-variant-numeric: tabular-nums; }
+.count span { color: var(--muted); font-size: 13px; }
+.pager { display: flex; gap: 6px; align-items: center; font: 12px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+.btn { border: 1px solid var(--line); background: var(--surface); color: var(--ink); border-radius: 6px; padding: 5px 11px; font: 500 13px var(--f-body); cursor: pointer; }
+.btn:disabled { opacity: .4; cursor: default; }
+
+.list { display: flex; flex-direction: column; gap: 12px; }
+article.card { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 300px); gap: 14px 20px; }
+@media (max-width: 720px) { article.card { grid-template-columns: minmax(0, 1fr); } }
+.chead { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; }
+.id { font: 600 12px var(--f-mono); color: var(--muted); }
+.pill { font: 600 10px var(--f-mono); letter-spacing: .06em; text-transform: uppercase; padding: 2px 7px; border-radius: 4px; background: var(--open); color: var(--muted); white-space: nowrap; }
+.pill.eval { background: var(--accent-soft); color: var(--accent); }
+.pill.ok { background: var(--good-soft); color: var(--good); }
+.pill.no { background: var(--bad-soft); color: var(--bad); }
+.qa { min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.q, .comp { margin: 0; font: 12.5px/1.6 var(--f-mono); white-space: pre-wrap; overflow-wrap: anywhere; background: var(--code); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; max-height: 16em; overflow: auto; cursor: zoom-in; }
+.q.open, .comp.open { max-height: none; cursor: zoom-out; }
+.ans { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.k { font: 600 11px var(--f-mono); text-transform: uppercase; letter-spacing: .07em; color: var(--muted); }
+.ans code { font: 600 14px var(--f-mono); color: var(--good); background: var(--good-soft); padding: 2px 8px; border-radius: 4px; overflow-wrap: anywhere; }
+dl.meta { margin: 0; display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 4px 12px; align-content: start; font-size: 12.5px; }
+dl.meta dt { font: 12px var(--f-mono); color: var(--muted); }
+dl.meta dd { margin: 0; font: 12px var(--f-mono); overflow-wrap: anywhere; }
+dd.t { color: var(--good); } dd.f { color: var(--bad); }
+.maze { display: grid; gap: 2px; width: max-content; max-width: 100%; }
+.maze i { width: 14px; height: 14px; border-radius: 2px; background: var(--open); display: block; }
+.maze i.w { background: var(--wall); }
+.maze i.s { background: var(--accent); }
+.maze i.g { background: var(--good); }
+.empty { padding: 48px 16px; text-align: center; color: var(--muted); border: 1px dashed var(--line); border-radius: 8px; }
+
+/* Responses */
+.responses { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 12px; }
+.rhead { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: baseline; }
+.resp { display: flex; flex-direction: column; gap: 6px; padding-left: 12px; border-left: 3px solid var(--line); }
+.resp.ok { border-left-color: var(--good); }
+.resp.no { border-left-color: var(--bad); }
+.rmeta { display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; font: 12px var(--f-mono); color: var(--muted); }
+.rmeta b { color: var(--ink); font-weight: 600; }
+.comp .tg { color: var(--accent); font-weight: 600; }
+.comp .th { color: var(--think); background: var(--think-bg); }
+.comp .an { color: var(--ink); font-weight: 600; background: var(--accent-soft); }
+
+/* Overview */
+#overview { padding-block: 20px 60px; display: flex; flex-direction: column; gap: 22px; }
+.tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.tile { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 4px; }
+.tile .v { font: 700 28px/1.1 var(--f-display); font-variant-numeric: tabular-nums; }
+.tile .d { font: 12px var(--f-mono); color: var(--muted); }
+.d.up { color: var(--good); } .d.down { color: var(--bad); }
+.charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr)); gap: 14px; }
+.chart { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 14px 16px 10px; display: flex; flex-direction: column; gap: 8px; min-width: 0; position: relative; }
+.chart p { margin: 0; color: var(--muted); font-size: 12px; }
+.chart svg { width: 100%; height: auto; display: block; overflow: visible; }
+.chart svg text { font: 11px var(--f-mono); fill: var(--muted); }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: 8px 10px; font: 12px var(--f-mono); color: var(--ink); box-shadow: 0 4px 14px rgba(23, 32, 44, .12); display: flex; flex-direction: column; gap: 3px; z-index: 2; white-space: nowrap; }
+.tip div { display: flex; align-items: center; gap: 6px; }
+.taskcharts { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr)); gap: 14px; margin-bottom: 18px; }
+.runline { display: flex; flex-wrap: wrap; gap: 6px 18px; font: 12px var(--f-mono); color: var(--muted); }
+.runline b { color: var(--ink); font-weight: 600; }
+</style>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand">
+      <h1 id="title">Reasoning Gym Samples</h1>
+      <p id="summary">Loading…</p>
+      <button class="linkbtn" id="toggleSys" aria-expanded="false">Show system prompt</button>
+    </div>
+    <pre class="sysprompt" id="sys" hidden></pre>
+    <nav class="tabs" id="tabs" role="tablist"></nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <section id="overview" hidden></section>
+  <main id="browse">
+    <aside id="filters" aria-label="Filters"></aside>
+    <section>
+      <div class="taskcharts" id="taskcharts" hidden></div>
+      <div class="toolbar">
+        <div class="count" id="count"></div>
+        <div class="pager">
+          <button class="btn" id="prev">Previous</button>
+          <span id="pageinfo"></span>
+          <button class="btn" id="next">Next</button>
+        </div>
+      </div>
+      <div class="list" id="list"></div>
+    </section>
+  </main>
+</div>
+
+<script id="report-data" type="application/json"></script>
+<script>
+const PAGE = 25;
+const RESP_SHOWN = 4;
+const SMOOTH = 5;
+const SLOTS = ["--s1", "--s2", "--s3", "--s4", "--s5", "--s6", "--s7", "--s8"];
+const $ = id => document.getElementById(id);
+const el = (tag, cls, text) => { const e = document.createElement(tag); if (cls) e.className = cls; if (text != null) e.textContent = text; return e; };
+const svgEl = (tag, attrs) => { const e = document.createElementNS("http://www.w3.org/2000/svg", tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; };
+const css = v => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+// Inline data (run report) or fetched files (dataset browser)
+const inlineEl = $("report-data");
+const INLINE = inlineEl && inlineEl.textContent.trim() ? JSON.parse(inlineEl.textContent) : null;
+const RUN = INLINE && INLINE.run, AN = INLINE && INLINE.analysis;
+const loadIndex = async () => INLINE ? INLINE.index : (await fetch("index.json")).json();
+const loadTask = async name => INLINE ? INLINE.rows[name] : (await fetch(`${name}.json`)).json();
+
+const cache = {};
+let index, taskNames = [], colorOf = {}, task, rows = [], facets = [], state = {}, page = 0;
+
+const fmt = v => typeof v === "string" ? v : JSON.stringify(v);
+const pct = v => v == null ? "–" : `${v.toFixed(1)}%`;
+const smooth = (ys, w) => ys.map((_, i) => { const s = ys.slice(Math.max(0, i - w + 1), i + 1).filter(v => v != null); return s.length ? s.reduce((a, b) => a + b, 0) / s.length : null; });
+const toPct = ys => ys.map(v => v == null ? null : v * 100);
+
+/* ---------- Charts ---------- */
+function lineChart({ title, sub, xs, series, yMax, unit = "%", xLabel = "step" }) {
+  const box = el("div", "chart");
+  box.append(el("h2", null, title));
+  if (sub) box.append(el("p", null, sub));
+  if (series.length > 1) {
+    const lg = el("div", "legend");
+    series.forEach(s => { const sp = el("span"); const sw = el("i", "sw"); sw.style.background = s.color; sp.append(sw, s.dash ? `${s.name} (dashed)` : s.name); lg.append(sp); });
+    box.append(lg);
+  }
+  const vals = series.flatMap(s => s.ys).filter(v => v != null);
+  if (!xs.length || !vals.length) { box.append(el("p", null, "No data yet.")); return box; }
+  const W = 640, H = 230, L = 44, R = 12, T = 10, B = 28;
+  const xMin = Math.min(...xs), xMax = Math.max(...xs) || 1;
+  const top = yMax ?? niceMax(Math.max(...vals));
+  const X = x => L + (xMax === xMin ? (W - L - R) / 2 : (x - xMin) / (xMax - xMin) * (W - L - R));
+  const Y = y => T + (1 - y / top) * (H - T - B);
+  const svg = svgEl("svg", { viewBox: `0 0 ${W} ${H}`, role: "img", "aria-label": title });
+  for (let i = 0; i <= 4; i++) {
+    const v = top * i / 4;
+    svg.append(svgEl("line", { x1: L, x2: W - R, y1: Y(v), y2: Y(v), stroke: css("--grid"), "stroke-width": 1 }));
+    const t = svgEl("text", { x: L - 6, y: Y(v) + 4, "text-anchor": "end" }); t.textContent = unit === "%" ? `${Math.round(v)}%` : Math.round(v).toLocaleString(); svg.append(t);
+  }
+  ticks(xMin, xMax).forEach(x => { const t = svgEl("text", { x: X(x), y: H - 8, "text-anchor": "middle" }); t.textContent = x; svg.append(t); });
+  const xl = svgEl("text", { x: W - R, y: H - 8, "text-anchor": "end" }); xl.textContent = xLabel; if (ticks(xMin, xMax).every(x => X(x) < W - R - 40)) svg.append(xl);
+  for (const s of series) {
+    let d = "", pen = false;
+    s.ys.forEach((y, i) => { if (y == null) { pen = false; return; } d += `${pen ? "L" : "M"}${X(xs[i]).toFixed(1)},${Y(y).toFixed(1)}`; pen = true; });
+    svg.append(svgEl("path", { d, fill: "none", stroke: s.color, "stroke-width": s.width || 2, "stroke-linejoin": "round", "stroke-linecap": "round", "stroke-dasharray": s.dash ? "5 4" : "none" }));
+    if (xs.length <= 12) s.ys.forEach((y, i) => { if (y != null) svg.append(svgEl("circle", { cx: X(xs[i]), cy: Y(y), r: 3.5, fill: s.color, stroke: css("--surface"), "stroke-width": 2 })); });
+  }
+  // Hover: crosshair + tooltip with every series at the nearest step
+  const cross = svgEl("line", { y1: T, y2: H - B, stroke: css("--muted"), "stroke-width": 1, "stroke-dasharray": "3 3", visibility: "hidden" });
+  const hit = svgEl("rect", { x: L, y: T, width: W - L - R, height: H - T - B, fill: "transparent" });
+  svg.append(cross, hit);
+  const tip = el("div", "tip"); tip.hidden = true; box.append(svg, tip);
+  hit.addEventListener("mousemove", e => {
+    const r = svg.getBoundingClientRect(); const px = (e.clientX - r.left) / r.width * W;
+    let i = 0; xs.forEach((x, j) => { if (Math.abs(X(x) - px) < Math.abs(X(xs[i]) - px)) i = j; });
+    cross.setAttribute("x1", X(xs[i])); cross.setAttribute("x2", X(xs[i])); cross.setAttribute("visibility", "visible");
+    tip.replaceChildren(el("b", null, `${xLabel} ${xs[i]}`));
+    series.forEach(s => { const row = el("div"); const sw = el("i", "sw"); sw.style.background = s.color; row.append(sw, `${s.name}: ${s.ys[i] == null ? "–" : unit === "%" ? pct(s.ys[i]) : Math.round(s.ys[i]).toLocaleString()}`); tip.append(row); });
+    tip.hidden = false;
+    const bx = box.getBoundingClientRect(); let left = e.clientX - bx.left + 14;
+    if (left + tip.offsetWidth > bx.width) left = e.clientX - bx.left - tip.offsetWidth - 14;
+    tip.style.left = `${Math.max(4, left)}px`; tip.style.top = `${e.clientY - bx.top + 10}px`;
+  });
+  hit.addEventListener("mouseleave", () => { tip.hidden = true; cross.setAttribute("visibility", "hidden"); });
+  return box;
+}
+function niceMax(v) { if (v <= 0) return 1; const p = 10 ** Math.floor(Math.log10(v)); return Math.ceil(v / p) * p; }
+function ticks(a, b) { if (a === b) return [a]; const span = b - a, step = niceMax(span / 5); const out = []; for (let x = Math.ceil(a / step) * step; x <= b; x += step) out.push(+x.toFixed(6)); return out; }
+
+function tile(label, value, delta, cls) {
+  const t = el("div", "tile"); t.append(el("span", "k", label), el("span", "v", value));
+  if (delta) t.append(el("span", "d" + (cls ? " " + cls : ""), delta)); return t;
+}
+
+function renderOverview() {
+  const ov = $("overview"); ov.replaceChildren();
+  const ev = AN.eval, tr = AN.train;
+  const line = el("div", "runline");
+  [["model", RUN.model], ["trained on", RUN.train_tasks], ["step", RUN.global_step], ["generated", RUN.generated_at]].forEach(([k, v]) => { if (v != null) { const s = el("span"); s.append(`${k} `, el("b", null, String(v))); line.append(s); } });
+  ov.append(line);
+
+  const tiles = el("div", "tiles");
+  const first = ev.overall[0], last = ev.overall[ev.overall.length - 1];
+  const d = first != null && last != null ? last - first : null;
+  tiles.append(tile("Eval accuracy", pct(last), d == null ? `${ev.steps.length} evals` : `${d >= 0 ? "+" : ""}${d.toFixed(1)} pts since step ${ev.steps[0]}`, d > 0 ? "up" : d < 0 ? "down" : ""));
+  tiles.append(tile("Eval format score", pct(ev.format[ev.format.length - 1])));
+  const ar = tr.__all__ ? tr.__all__.ar.filter(v => v != null) : [];
+  const k = Math.max(1, Math.round(ar.length * 0.1));
+  const arFirst = ar.length ? ar.slice(0, k).reduce((a, b) => a + b, 0) / k * 100 : null, arLast = ar.length ? ar.slice(-k).reduce((a, b) => a + b, 0) / k * 100 : null;
+  tiles.append(tile("Train accuracy reward", pct(arLast), arFirst == null ? "no rollouts yet" : `from ${pct(arFirst)} (first vs last 10% of steps)`, arLast > arFirst ? "up" : arLast < arFirst ? "down" : ""));
+  tiles.append(tile("Rollouts saved", (RUN.num_rollouts || 0).toLocaleString(), `${tr.steps.length} training steps`));
+  ov.append(tiles);
+
+  const charts = el("div", "charts");
+  const evTasks = Object.keys(ev.per_task);
+  charts.append(lineChart({ title: "Eval accuracy", sub: "Fixed eval set, scored with reasoning-gym's checker", xs: ev.steps, yMax: 100,
+    series: [{ name: "overall", color: css("--ink"), ys: ev.overall, width: 2.5 }, ...evTasks.map(t => ({ name: t, color: colorOf[t], ys: ev.per_task[t] }))] }));
+  const trTasks = taskNames.filter(t => tr[t]);
+  charts.append(lineChart({ title: "Training accuracy reward", sub: `Mean over each step's rollouts, ${SMOOTH}-step moving average`, xs: tr.steps, yMax: 100,
+    series: [{ name: "overall", color: css("--ink"), ys: smooth(toPct(tr.__all__?.ar || []), SMOOTH), width: 2.5 }, ...trTasks.map(t => ({ name: t, color: colorOf[t], ys: smooth(toPct(tr[t].ar), SMOOTH) }))] }));
+  charts.append(lineChart({ title: "Format reward", sub: `Share of <think>/<answer> tags present; training is a ${SMOOTH}-step moving average`, xs: [...new Set([...tr.steps, ...ev.steps])].sort((a, b) => a - b), yMax: 100,
+    series: (() => { const xs = [...new Set([...tr.steps, ...ev.steps])].sort((a, b) => a - b); const trS = smooth(toPct(tr.__all__?.fr || []), SMOOTH); const m1 = Object.fromEntries(tr.steps.map((s, i) => [s, trS[i]])), m2 = Object.fromEntries(ev.steps.map((s, i) => [s, ev.format[i]]));
+      return [{ name: "training rollouts", color: css("--s1"), ys: xs.map(x => m1[x] ?? null) }, { name: "eval", color: css("--s2"), ys: xs.map(x => m2[x] ?? null), dash: true }]; })() }));
+  const lenUnit = tr.len_unit || "chars";
+  charts.append(lineChart({ title: "Completion length", sub: `Mean ${lenUnit} per training rollout, ${SMOOTH}-step moving average`, xs: tr.steps, unit: lenUnit,
+    series: trTasks.map(t => ({ name: t, color: colorOf[t], ys: smooth(tr[t].len, SMOOTH) })) }));
+  if ((tr.__all__?.tc || []).some(v => v != null) || (ev.trunc || []).some(v => v != null)) {
+    const xs = [...new Set([...tr.steps, ...ev.steps])].sort((a, b) => a - b);
+    const m1 = Object.fromEntries(tr.steps.map((s, i) => [s, smooth(tr.__all__.tc, SMOOTH)[i]])), m2 = Object.fromEntries(ev.steps.map((s, i) => [s, ev.trunc[i]]));
+    charts.append(lineChart({ title: "Truncated responses", sub: `Share that hit the token limit before finishing; training is a ${SMOOTH}-step moving average`, xs, yMax: 100,
+      series: [{ name: "training rollouts", color: css("--s1"), ys: xs.map(x => m1[x] ?? null) }, { name: "eval", color: css("--s2"), ys: xs.map(x => m2[x] ?? null), dash: true }] }));
+  }
+  const issues = Object.entries(tr.issues || {});
+  if (issues.length) charts.append(lineChart({ title: "Format issues in training rollouts",
+    sub: `Share of rollouts with each issue (a rollout can have several), ${SMOOTH}-step moving average`, xs: tr.steps, yMax: 100,
+    series: issues.map(([name, ys], i) => ({ name, ys: smooth(ys, SMOOTH), color: name === "any issue" ? css("--ink") : css(SLOTS[(i - 1 + SLOTS.length) % SLOTS.length]), width: name === "any issue" ? 2.5 : 2 })) }));
+  if ((tr.signal || []).some(v => v != null)) charts.append(lineChart({ title: "Groups with learning signal",
+    sub: `Share of rollout groups whose total rewards differ (GRPO gets zero advantage otherwise), ${SMOOTH}-step moving average`, xs: tr.steps, yMax: 100,
+    series: [{ name: "groups with signal", color: css("--s1"), ys: smooth(tr.signal, SMOOTH) }] }));
+  ov.append(charts);
+
+  if (RUN.settings) {
+    const det = el("details", "settings"); det.open = true;
+    det.append(el("summary", null, "Run settings"));
+    const dl = el("dl");
+    for (const [k, v] of Object.entries(RUN.settings)) { const row = el("div"); row.append(el("dt", null, k), el("dd", null, fmt(v))); dl.append(row); }
+    det.append(dl); ov.append(det);
+  }
+}
+
+function renderTaskCharts() {
+  const box = $("taskcharts"); box.replaceChildren();
+  if (!AN) { box.hidden = true; return; }
+  box.hidden = false;
+  const ev = AN.eval, tr = AN.train[task];
+  if (ev.per_task[task]) box.append(lineChart({ title: "Eval accuracy", xs: ev.steps, yMax: 100, series: [{ name: task, color: colorOf[task], ys: ev.per_task[task] }] }));
+  if (tr) box.append(lineChart({ title: "Training rewards", sub: `${SMOOTH}-step moving average`, xs: AN.train.steps, yMax: 100,
+    series: [{ name: "accuracy", color: colorOf[task], ys: smooth(toPct(tr.ar), SMOOTH) }, { name: "format", color: css("--muted"), ys: smooth(toPct(tr.fr), SMOOTH), dash: true }] }));
+  if (!box.children.length) box.hidden = true;
+}
+
+/* ---------- Filters ---------- */
+const OUTCOME_ORDER = ["learned", "forgot", "unstable", "always correct", "never correct", "all correct", "mixed", "all wrong", "not sampled"];
+const evalStepsOf = rows => [...new Set(rows.flatMap(r => (r.R || []).filter(x => x.src === "eval").map(x => x.st)))].sort((a, b) => a - b);
+const evalAt = (r, st) => (r.R || []).find(x => x.src === "eval" && x.st === st);
+
+function buildFacets(rows) {
+  const fields = [];
+  if (RUN) fields.push(["Outcome", r => r.o], ["Learning signal", r => r.sig], ["Truncation", r => r.t]);
+  fields.push(["Split", r => r.s], ["Config", r => r.c], ["Answer", r => r.a]);
+  const keys = new Set(); rows.forEach(r => Object.keys(r.m).forEach(k => keys.add(k)));
+  keys.forEach(k => fields.push([k, r => r.m[k]]));
+  const out = [];
+  for (const [name, get] of fields) {
+    const vals = rows.map(get).filter(v => v !== undefined && v !== null);
+    if (!vals.length || vals.some(v => typeof v === "object")) continue;
+    const distinct = new Set(vals.map(String));
+    if (distinct.size < 2) continue;
+    if (vals.every(v => typeof v === "number") && distinct.size > 8) {
+      out.push({ name, get, kind: "range", min: Math.min(...vals), max: Math.max(...vals) });
+    } else if (distinct.size <= 40) {
+      const order = name === "Outcome" ? OUTCOME_ORDER.filter(v => distinct.has(v))
+        : [...distinct].sort((a, b) => isNaN(a) || isNaN(b) ? a.localeCompare(b) : a - b);
+      out.push({ name, get, kind: "chips", values: order });
+    }
+  }
+  // A sample can have several format issues across its responses, so this filter matches any selected one
+  const issueVals = [...new Set(rows.flatMap(r => r.fi || []))];
+  if (RUN && issueVals.length) {
+    const order = ["clean", "missing think", "missing answer", "multiple think", "multiple answer", "text before think", "text after answer", "wrong order"];
+    out.splice(1, 0, { name: "Format issues", kind: "chips", multi: true, get: r => r.fi || [], values: order.filter(v => issueVals.includes(v)) });
+  }
+  // Eval samples: correctness at the eval step picked in the step selector (default: the last eval)
+  const steps = evalStepsOf(rows);
+  if (RUN && steps.length) {
+    out.splice(1, 0, { name: "Result at eval step", kind: "chips", values: ["correct", "wrong"], evalStep: true,
+      get: r => { const x = r.s === "eval" ? evalAt(r, state.evalStep ?? steps[steps.length - 1]) : null; return x ? (x.ar >= 1 ? "correct" : "wrong") : undefined; } });
+  }
+  return out;
+}
+
+function passes(r, skip) {
+  for (const f of facets) {
+    if (f === skip) continue;
+    const st = state[f.name], v = f.get(r);
+    if (f.multi) { if (st.size && !v.some(x => st.has(x))) return false; continue; }
+    if (f.kind === "chips" && st.size && !st.has(String(v))) return false;
+    if (f.kind === "range" && (v < st.lo || v > st.hi)) return false;
+  }
+  if (state.search) {
+    const s = state.search;
+    if (!(r.q.toLowerCase().includes(s) || String(r.a).toLowerCase().includes(s) || JSON.stringify(r.m).toLowerCase().includes(s)
+      || (r.R && r.R.some(x => x.c.toLowerCase().includes(s))))) return false;
+  }
+  return true;
+}
+
+function renderFilters() {
+  const box = $("filters"); box.replaceChildren();
+  const g = el("div", "fgroup");
+  const lab = el("label", "flabel", "Search"); lab.htmlFor = "search";
+  const inp = el("input"); inp.type = "search"; inp.id = "search"; inp.placeholder = RUN ? "Question, answer, metadata or response" : "Text in question, answer or metadata";
+  inp.value = state.search || "";
+  let t; inp.addEventListener("input", () => { clearTimeout(t); t = setTimeout(() => { state.search = inp.value.trim().toLowerCase(); page = 0; update(); }, 150); });
+  g.append(lab, inp); box.append(g);
+
+  for (const f of facets) {
+    const g = el("div", "fgroup");
+    const lab = el("div", "flabel"); lab.append(el("span", null, f.name));
+    if (f.evalStep) {
+      // Step selector: which eval step's response the cards show and the chips below test
+      const steps = evalStepsOf(rows);
+      const sl = el("div", "fgroup");
+      const sLab = el("label", "flabel", "Eval step"); sLab.htmlFor = "evalstep";
+      const sel = el("select"); sel.id = "evalstep";
+      sel.append(new Option("All steps (chips use the last)", ""));
+      steps.forEach(s => sel.append(new Option(`Step ${s}`, s)));
+      sel.value = state.evalStep ?? "";
+      sel.onchange = () => { state.evalStep = sel.value === "" ? null : +sel.value; page = 0; update(); };
+      sl.append(sLab, sel); box.append(sl);
+    }
+    if (f.kind === "chips") {
+      const clr = el("button", "linkbtn", "Clear");
+      clr.onclick = () => { state[f.name].clear(); page = 0; update(); };
+      lab.append(clr); g.append(lab);
+      const chips = el("div", "chips"); f.chipEls = {};
+      for (const v of f.values) {
+        const c = el("button", "chip"); c.append(el("span", null, v), el("span", "c"));
+        c.onclick = () => { const s = state[f.name]; s.has(v) ? s.delete(v) : s.add(v); page = 0; update(); };
+        f.chipEls[v] = c; chips.append(c);
+      }
+      f.clearEl = clr; g.append(chips);
+    } else {
+      const st = state[f.name];
+      const reset = el("button", "linkbtn", "Reset"); f.clearEl = reset;
+      reset.onclick = () => { st.lo = f.min; st.hi = f.max; renderFilters(); page = 0; update(); };
+      lab.append(reset); g.append(lab);
+      const row = el("div", "range");
+      const mk = (key, id) => { const i = el("input"); i.type = "number"; i.id = id; i.value = st[key]; i.min = f.min; i.max = f.max;
+        i.onchange = () => { const n = parseFloat(i.value); st[key] = isNaN(n) ? (key === "lo" ? f.min : f.max) : n; page = 0; update(); }; return i; };
+      row.append(mk("lo", `lo-${f.name}`), el("span", null, "to"), mk("hi", `hi-${f.name}`));
+      g.append(row, el("div", "hint", `range ${f.min} – ${f.max}`));
+    }
+    box.append(g);
+  }
+}
+
+function updateFilterCounts() {
+  for (const f of facets) {
+    if (f.kind === "chips") {
+      const counts = {};
+      for (const r of rows) if (passes(r, f)) for (const v of (f.multi ? f.get(r) : [String(f.get(r))])) counts[v] = (counts[v] || 0) + 1;
+      for (const v of f.values) {
+        const c = f.chipEls[v]; const n = counts[v] || 0;
+        c.querySelector(".c").textContent = n.toLocaleString();
+        c.setAttribute("aria-pressed", state[f.name].has(v));
+        c.classList.toggle("zero", n === 0);
+      }
+      f.clearEl.hidden = !state[f.name].size;
+    } else {
+      const st = state[f.name]; f.clearEl.hidden = st.lo === f.min && st.hi === f.max;
+    }
+  }
+}
+
+/* ---------- Cards ---------- */
+function mazeGrid(m) {
+  const g = el("div", "maze"); g.style.gridTemplateColumns = `repeat(${m.grid[0].length}, 14px)`;
+  g.setAttribute("aria-label", `Maze ${m.grid_size}×${m.grid_size}`);
+  for (const line of m.grid) for (const ch of line) g.append(el("i", ch === m.wall ? "w" : ch === m.start ? "s" : ch === m.goal ? "g" : ""));
+  return g;
+}
+
+// Raw completion with <think>/<answer> tags kept visible and their contents tinted
+function completion(text) {
+  const pre = el("pre", "comp"); pre.tabIndex = 0; pre.title = "Click to expand";
+  pre.onclick = () => pre.classList.toggle("open");
+  let mode = "";
+  for (const part of text.split(/(<\/?(?:think|answer)>)/i)) {
+    if (!part) continue;
+    const m = part.match(/^<(\/?)(think|answer)>$/i);
+    if (m) { pre.append(el("span", "tg", part)); mode = m[1] ? "" : m[2].toLowerCase() === "think" ? "th" : "an"; }
+    else pre.append(mode ? el("span", mode, part) : document.createTextNode(part));
+  }
+  return pre;
+}
+
+function responseEl(x, showStep = true) {
+  const ok = x.ar >= 1;
+  const d = el("div", "resp " + (ok ? "ok" : "no"));
+  const meta = el("div", "rmeta");
+  meta.append(el("span", "pill " + (ok ? "ok" : "no"), ok ? "correct" : x.ar > 0 ? "partial" : "wrong"));
+  if (showStep) meta.append(el("span", "pill" + (x.src === "eval" ? " eval" : ""), x.src));
+  if (x.tc) meta.append(el("span", "pill warn", "truncated"));
+  (x.fi || []).forEach(i => meta.append(el("span", "pill warn", i)));
+  const add = (k, v) => { const s = el("span"); s.append(`${k} `, el("b", null, v)); meta.append(s); };
+  if (showStep) add("step", String(x.st));
+  add("accuracy", x.ar.toFixed(2));
+  add("format", x.fr.toFixed(2));
+  if (x.tr != null) add("total", x.tr.toFixed(2));
+  if (x.nt != null) add("tokens", String(x.nt));
+  add("extracted", x.x == null ? "none" : JSON.stringify(x.x));
+  d.append(meta, completion(x.c));
+  return d;
+}
+
+// One GRPO group: the rollouts sampled together for this prompt at one step
+function groupEl(members) {
+  const g = el("div", "group");
+  const head = el("div", "ghead");
+  const nOk = members.filter(x => x.ar >= 1).length;
+  const totals = members.map(x => x.tr ?? x.ar + x.fr);
+  head.append(el("span", "pill", "rollout group"));
+  const add = (k, v) => { const s = el("span"); s.append(`${k} `, el("b", null, v)); head.append(s); };
+  add("step", String(members[0].st));
+  add("correct", `${nOk}/${members.length}`);
+  add("total reward", `${Math.min(...totals).toFixed(2)}–${Math.max(...totals).toFixed(2)}`);
+  head.append(members[0].sig === false ? el("span", "pill warn", "no learning signal") : el("span", "pill ok", "learning signal"));
+  g.append(head);
+  members.forEach(x => g.append(responseEl(x, false)));
+  return g;
+}
+
+function responsesEl(r) {
+  const box = el("div", "responses");
+  let R = r.R;
+  if (state.evalStep != null) R = R.filter(x => x.src !== "eval" || x.st === state.evalStep);
+  const evalR = R.filter(x => x.src === "eval");
+  const groups = [];
+  for (const x of R.filter(x => x.src === "rollout")) {
+    const last = groups[groups.length - 1];
+    if (last && last[0].g === x.g) last.push(x); else groups.push([x]);
+  }
+  const nOk = R.filter(x => x.ar >= 1).length;
+  const head = el("div", "rhead");
+  const what = [evalR.length && `${evalR.length} eval`, groups.length && `${groups.length} rollout group${groups.length > 1 ? "s" : ""}`].filter(Boolean).join(" · ");
+  head.append(el("span", "k", `Responses (${R.length})`), el("span", "hint", `${nOk} correct · ${what} · steps ${[...new Set(R.map(x => x.st))].join(", ")}`));
+  box.append(head);
+  const items = [...evalR.map(x => () => responseEl(x)), ...groups.map(m => () => groupEl(m))];
+  items.slice(0, RESP_SHOWN).forEach(f => box.append(f()));
+  if (items.length > RESP_SHOWN) {
+    const more = el("button", "linkbtn", `Show ${items.length - RESP_SHOWN} more`);
+    more.onclick = () => { more.remove(); items.slice(RESP_SHOWN).forEach(f => box.append(f())); };
+    box.append(more);
+  }
+  return box;
+}
+
+function card(r) {
+  const a = el("article", "card");
+  const h = el("div", "chead");
+  h.append(el("span", "id", `#${r.i}`), el("span", "pill" + (r.s === "eval" ? " eval" : ""), r.s), el("span", "pill", r.c));
+  if (RUN && r.o) h.append(el("span", "pill" + (r.o === "all correct" ? " ok" : r.o === "all wrong" ? " no" : ""), r.o));
+  a.append(h);
+
+  const qa = el("div", "qa");
+  const q = el("pre", "q", r.q); q.tabIndex = 0; q.title = "Click to expand"; q.onclick = () => q.classList.toggle("open");
+  const ans = el("div", "ans"); ans.append(el("span", "k", "Answer"), el("code", null, r.a));
+  qa.append(q, ans);
+  if (task === "maze" && Array.isArray(r.m.grid)) qa.append(mazeGrid(r.m));
+  a.append(qa);
+
+  const dl = el("dl", "meta");
+  for (const [k, v] of Object.entries(r.m)) {
+    if (task === "maze" && k === "grid") continue;
+    dl.append(el("dt", null, k), el("dd", v === true ? "t" : v === false ? "f" : "", fmt(v)));
+  }
+  a.append(dl);
+  if (r.R && r.R.length) a.append(responsesEl(r));
+  return a;
+}
+
+function update() {
+  const hits = rows.filter(r => passes(r));
+  const pages = Math.max(1, Math.ceil(hits.length / PAGE));
+  page = Math.min(page, pages - 1);
+  $("count").replaceChildren(el("b", null, hits.length.toLocaleString()), document.createTextNode(" samples "), el("span", null, `of ${rows.length.toLocaleString()}`));
+  $("pageinfo").textContent = `${page + 1} / ${pages}`;
+  $("prev").disabled = page === 0; $("next").disabled = page >= pages - 1;
+  const list = $("list"); list.replaceChildren();
+  if (!hits.length) list.append(el("div", "empty", "No samples match these filters. Clear a filter to see more."));
+  hits.slice(page * PAGE, page * PAGE + PAGE).forEach(r => list.append(card(r)));
+  updateFilterCounts();
+}
+
+/* ---------- Tabs ---------- */
+function selectTab(name) {
+  document.querySelectorAll(".tab").forEach(t => t.setAttribute("aria-selected", t.dataset.task === name));
+  try { history.replaceState(null, "", "#" + name); } catch (e) {}
+}
+
+function openOverview() {
+  task = null; selectTab("overview");
+  $("browse").hidden = true; $("overview").hidden = false;
+  renderOverview();
+}
+
+async function openTask(name) {
+  task = name; selectTab(name);
+  $("overview").hidden = true; $("browse").hidden = false;
+  $("list").replaceChildren(el("div", "empty", "Loading samples…"));
+  const data = cache[name] || (cache[name] = await loadTask(name));
+  if (task !== name) return;
+  // Rows the model actually answered come first
+  rows = RUN ? [...data].sort((a, b) => (b.R.length > 0) - (a.R.length > 0)) : data;
+  facets = buildFacets(rows);
+  state = { search: "" };
+  for (const f of facets) state[f.name] = f.kind === "chips" ? new Set() : { lo: f.min, hi: f.max };
+  page = 0; renderTaskCharts(); renderFilters(); update();
+}
+
+async function init() {
+  index = await loadIndex();
+  taskNames = Object.keys(index.tasks).sort();
+  const evalOnly = taskNames.filter(t => Object.keys(index.tasks[t]).every(k => k.endsWith("/eval")));
+  taskNames.forEach((t, i) => colorOf[t] = css(SLOTS[i % SLOTS.length]));
+  $("sys").textContent = index.system_prompt;
+  const total = taskNames.reduce((s, t) => s + Object.values(index.tasks[t]).reduce((a, b) => a + b, 0), 0);
+  if (RUN) {
+    const name = RUN.run_name || "Training run";
+    $("title").textContent = name; document.title = `${name} · run report`;
+    const nSplit = s => taskNames.reduce((a, t) => a + Object.entries(index.tasks[t]).filter(([k]) => k.endsWith("/" + s)).reduce((x, [, v]) => x + v, 0), 0);
+    $("summary").textContent = `${nSplit("eval").toLocaleString()} eval samples · ${nSplit("train").toLocaleString()} representative training samples · ${(RUN.num_rollouts || 0).toLocaleString()} rollouts · ${RUN.eval_steps.length} evals`;
+  } else {
+    $("summary").textContent = `${total.toLocaleString()} procedurally generated samples across ${taskNames.length} tasks`;
+  }
+  const tabs = $("tabs");
+  if (RUN) { const b = el("button", "tab"); b.dataset.task = "overview"; b.setAttribute("role", "tab"); b.append(el("span", null, "Run overview")); b.onclick = openOverview; tabs.append(b); }
+  for (const name of taskNames) {
+    const counts = index.tasks[name]; const n = Object.values(counts).reduce((a, b) => a + b, 0);
+    const b = el("button", "tab"); b.dataset.task = name; b.setAttribute("role", "tab");
+    b.title = Object.entries(counts).map(([k, v]) => `${k}: ${v}`).join("\n");
+    const sw = el("i", "sw"); sw.style.background = colorOf[name];
+    b.append(sw, el("span", null, name.replace(/_/g, " ")), el("span", "n", n.toLocaleString()));
+    if (evalOnly.includes(name)) b.append(el("span", "tag", "eval only"));
+    b.onclick = () => openTask(name);
+    tabs.append(b);
+  }
+  $("prev").onclick = () => { page--; update(); window.scrollTo({ top: 0 }); };
+  $("next").onclick = () => { page++; update(); window.scrollTo({ top: 0 }); };
+  $("toggleSys").onclick = e => { const s = $("sys"); s.hidden = !s.hidden; e.target.setAttribute("aria-expanded", !s.hidden); e.target.textContent = s.hidden ? "Show system prompt" : "Hide system prompt"; };
+  const h = location.hash.slice(1);
+  if (taskNames.includes(h)) openTask(h);
+  else if (RUN) openOverview();
+  else openTask(taskNames.includes("syllogism") ? "syllogism" : taskNames[0]);
+}
+init().catch(e => { $("list").replaceChildren(el("div", "empty", "Could not load the sample data: " + e.message)); });
+</script>

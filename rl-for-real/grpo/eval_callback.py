@@ -111,6 +111,16 @@ class FixedEvalCallback(TrainerCallback):
             self._run_eval(model, step)
             self.last_eval_step = step
     
+    def on_train_end(self, args, state, control, model=None, **kwargs):
+        """Evaluate the final model unless the last step was already evaluated."""
+        if model is None:
+            return
+
+        step = state.global_step
+        if step != self.last_eval_step:
+            self._run_eval(model, step)
+            self.last_eval_step = step
+
     def _run_eval(self, model, step: int):
         """Run evaluation and log/save results."""
         if _is_main_process():
@@ -130,6 +140,11 @@ class FixedEvalCallback(TrainerCallback):
         device = next(model.parameters()).device
         pad_token_id = self.tokenizer.pad_token_id or self.tokenizer.eos_token_id
         
+        # A response with no EOS token ran into max_new_tokens (Llama 3 has several EOS ids)
+        eos = model.generation_config.eos_token_id
+        stop_ids = set(eos if isinstance(eos, list) else [eos]) | {self.tokenizer.eos_token_id}
+        stop_ids.discard(None)
+
         examples = []
         
         # Each rank evaluates its own shard of the fixed samples (all of them when not distributed)
@@ -170,6 +185,10 @@ class FixedEvalCallback(TrainerCallback):
             for i, (sample_idx, sample) in enumerate(batch_indexed):
                 generated_ids = outputs[i][input_length:]
                 generated_text = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
+                ids = generated_ids.tolist()
+                stop_at = next((j for j, t in enumerate(ids) if t in stop_ids), None)
+                truncated = stop_at is None
+                num_tokens = len(ids) if truncated else stop_at + 1
                 extracted = extract_answer(generated_text)
 
                 score = self.procedural_dataset.score_answer(extracted, sample["item"])
@@ -186,6 +205,8 @@ class FixedEvalCallback(TrainerCallback):
                     "accuracy_score": score,
                     "format_score": format_score,
                     "task": sample["task"],
+                    "num_tokens": num_tokens,
+                    "truncated": truncated,
                 })
         
         torch.cuda.empty_cache()
@@ -201,6 +222,7 @@ class FixedEvalCallback(TrainerCallback):
         
         num_correct = sum(ex["correct"] for ex in examples)
         format_scores = [ex["format_score"] for ex in examples]
+        num_truncated = sum(ex["truncated"] for ex in examples)
         task_stats = {}  # task_name -> {"correct": int, "total": int, "format_scores": list}
         for ex in examples:
             stats = task_stats.setdefault(ex["task"], {"correct": 0, "total": 0, "format_scores": []})
@@ -228,6 +250,7 @@ class FixedEvalCallback(TrainerCallback):
             "format_score": avg_format,
             "num_correct": num_correct,
             "num_samples": len(self.fixed_samples),
+            "truncated_ratio": num_truncated / len(self.fixed_samples) * 100 if self.fixed_samples else 0,
             "examples": examples,
             "per_task": per_task_results,
         }
@@ -281,13 +304,14 @@ class FixedEvalCallback(TrainerCallback):
             "format_score": results["format_score"],
             "num_correct": results["num_correct"],
             "num_samples": results["num_samples"],
+            "truncated_ratio": results.get("truncated_ratio"),
             "per_task": results.get("per_task", {}),
             "examples": results["examples"],
         }
         
         filepath = os.path.join(eval_dir, f"eval_step_{step}.json")
         try:
-            with open(filepath, "w") as f:
+            with open(filepath, "w", encoding="utf-8") as f:
                 json.dump(save_data, f, indent=2, default=str)
             self.logger.info(f"📁 Saved eval results to {filepath}")
         except Exception as e:

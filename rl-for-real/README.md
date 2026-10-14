@@ -79,6 +79,8 @@ This will train Llama-3.2-1B-Instruct for several minutes to solve the `syllogis
 
 Observe the training and evaluation curves at wandb, as well as examples for questions and answers in the stdout logs. What changes in the model behavior?
 
+Each run also writes `<output_dir>/report.html`, a self-contained page (open it directly in a browser) for inspecting the run: every eval sample and a representative set of training samples, each with the model's raw responses (`<think>`/`<answer>` included), correctness and rewards, plus accuracy, reward and response-length charts. It is rebuilt after every fixed eval, at each checkpoint and at the end of training. Raw rollouts are saved in `<output_dir>/rollouts/` and eval results in `<output_dir>/eval_results/`.
+
 ### Train Qwen for better reasoning
 
 #### Intro

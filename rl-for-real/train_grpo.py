@@ -295,6 +295,16 @@ def _run_training(reasoning_gym_args, training_args, model_args, logger):
     trainer.add_callback(eval_callback)
     logger.info(f"✓ Eval callback: {reasoning_gym_args.eval_num_samples} samples every {reasoning_gym_args.fixed_eval_steps} steps")
 
+    # HTML run report (after the eval callback, so each report includes the eval that just ran)
+    report_callback = grpo.ReportCallback(
+        train_data=train_dataset.data,
+        eval_data=eval_dataset.data,
+        system_prompt=train_dataset.developer_prompt,
+        run_info=grpo.run_info(reasoning_gym_args, training_args, model_args),
+        eval_steps=reasoning_gym_args.fixed_eval_steps,
+    )
+    trainer.add_callback(report_callback)
+
     # Find checkpoint for resuming
     ckpt = _find_checkpoint(reasoning_gym_args, training_args, logger)
     
