@@ -9,7 +9,7 @@ from trl import GRPOConfig, GRPOTrainer
 
 from reasoning_gym.utils import extract_answer
 
-from .dataset import ReasoningGymDataset
+from .dataset import FORMAT_HINT, ReasoningGymDataset
 from .formatting import format_issues
 
 # Try to import wandb for logging (optional)
@@ -132,11 +132,12 @@ class CustomGRPOTrainer(GRPOTrainer):
         if self.log_reward_variance:
             self._log_variance(rewards, answers, completions)
 
-        self._save_rollouts(completions, answers, rewards, kwargs["item"], kwargs.get("completion_ids"))
+        self._save_rollouts(completions, answers, rewards, kwargs["item"], kwargs.get("completion_ids"),
+                            kwargs.get("prompts"))
         return rewards
 
     def _save_rollouts(self, completions: list[str], answers: list[str], rewards: list[float], items: list[dict],
-                       completion_ids: list[list[int]] | None = None):
+                       completion_ids: list[list[int]] | None = None, prompts: list[str] | None = None):
         """Append every rollout to <output_dir>/rollouts/rollouts_rank<N>.jsonl (written as training goes)."""
         rollout_dir = os.path.join(self.args.output_dir, "rollouts")
         os.makedirs(rollout_dir, exist_ok=True)
@@ -148,9 +149,10 @@ class CustomGRPOTrainer(GRPOTrainer):
         # Same truncation test TRL uses: a completion that doesn't end in EOS/pad hit max_completion_length
         stop_ids = {self.eos_token_id, self.pad_token_id} if hasattr(self, "eos_token_id") else set()
         ids_list = completion_ids or [None] * len(completions)
+        prompt_list = prompts or [None] * len(completions)
         with open(path, "a", encoding="utf-8") as f:
-            for i, (completion, answer, reward, fmt, item, ids) in enumerate(
-                zip(completions, answers, rewards, format_rewards, items, ids_list)
+            for i, (completion, answer, reward, fmt, item, ids, prompt) in enumerate(
+                zip(completions, answers, rewards, format_rewards, items, ids_list, prompt_list)
             ):
                 f.write(json.dumps({
                     "step": self.state.global_step,
@@ -165,6 +167,7 @@ class CustomGRPOTrainer(GRPOTrainer):
                     "extracted": answer,
                     "accuracy_reward": reward,
                     "format_reward": fmt,
+                    "format_hint": FORMAT_HINT in prompt if isinstance(prompt, str) else None,
                 }, ensure_ascii=False, default=str) + "\n")
     
     def _log_variance(self, rewards: list[float], answers: list[str], completions: list[str]):
