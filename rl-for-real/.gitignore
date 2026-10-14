@@ -1,0 +1,38 @@
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+.Python
+*.egg-info/
+dist/
+build/
+
+# Training outputs
+outputs/
+checkpoints/
+*.pt
+*.bin
+*.safetensors
+
+# Logs
+*.log
+wandb/
+sweep_history/
+hf_cache_temp/
+
+# IDE
+.vscode/
+.idea/
+.env
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+

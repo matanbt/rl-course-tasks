@@ -1,0 +1,25 @@
+# RL for Real - Dependencies
+# Install with: pip install -r requirements.txt
+#
+# NOTE: Install PyTorch with CUDA support FIRST (see README.md):
+#   pip install torch --index-url https://download.pytorch.org/whl/cu124
+
+# Core ML stack (torch should already be installed with CUDA)
+torch>=2.3.0
+transformers==4.57.6
+accelerate>=0.30.0
+
+# RL training
+trl==0.27.2
+peft>=0.10.0  # For LoRA/PEFT fine-tuning
+
+# Reasoning environments
+reasoning-gym>=0.1.19
+
+# Logging & monitoring
+trackio>=0.2.0
+
+# Utilities
+tqdm>=4.65.0
+pyyaml>=6.0
+

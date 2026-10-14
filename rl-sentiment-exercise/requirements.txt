@@ -1,0 +1,18 @@
+# Core dependencies for RL sentiment fine-tuning exercise
+transformers==4.57.6
+trl==0.27.2
+torch>=2.0.0
+datasets>=2.14.0
+accelerate>=0.25.0
+peft>=0.10.0
+
+# For reward model
+scipy
+
+# For logging and visualization
+matplotlib
+numpy
+rich
+
+# For experiment tracking
+wandb

@@ -1,0 +1,509 @@
+<title>Tetris Training Replays</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&family=Silkscreen&display=swap">
+<style>
+/* Layout: an engineering-notebook page; the Tetris wells are the only "screens" (always dark),
+   the paper around them carries the story: three snapshots -> explorer -> how it was made. */
+:root {
+  --paper: #eef0f5;
+  --paper-2: #e3e6ee;
+  --card: #f8f9fc;
+  --ink: #151a2c;
+  --ink-2: #474e68;
+  --ink-3: #737a94;
+  --rule: #d3d8e4;
+  --grid: rgba(21, 26, 44, .045);
+  --accent: #3a5ce0;          /* PPO / training series */
+  --accent-soft: rgba(58, 92, 224, .14);
+  --eval: #151a2c;            /* evaluation markers */
+  --good: #1f8a5b;
+  --well: #10142a;            /* the game screen, identical in both themes */
+  --well-2: #181d36;
+  --well-grid: #1f2542;
+  --well-ink: #e9ecf8;
+  --well-ink-2: #8d94b8;
+  --key: #232948;
+  --key-on: #ffd23f;
+  --f-display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Consolas, monospace;
+  --f-pixel: "Silkscreen", "IBM Plex Mono", ui-monospace, monospace;
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 24px; --s-6: 40px; --s-7: 64px;
+  --t-xs: .75rem; --t-sm: .875rem; --t-md: 1rem; --t-lg: 1.25rem; --t-xl: clamp(1.6rem, 3vw, 2.1rem); --t-hero: clamp(2.2rem, 6vw, 3.9rem);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0c0f1d; --paper-2: #141830; --card: #121629;
+    --ink: #e7eaf5; --ink-2: #aab0ca; --ink-3: #7c83a3; --rule: #262c48; --grid: rgba(231, 234, 245, .03);
+    --accent: #7d97ff; --accent-soft: rgba(125, 151, 255, .16); --eval: #e7eaf5; --good: #4fc58d;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0c0f1d; --paper-2: #141830; --card: #121629;
+  --ink: #e7eaf5; --ink-2: #aab0ca; --ink-3: #7c83a3; --rule: #262c48; --grid: rgba(231, 234, 245, .03);
+  --accent: #7d97ff; --accent-soft: rgba(125, 151, 255, .16); --eval: #e7eaf5; --good: #4fc58d;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body {
+  background: var(--paper);
+  background-image: linear-gradient(var(--grid) 1px, transparent 1px), linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 32px 32px;
+  background-position: -1px -1px;
+  color: var(--ink);
+  font: 400 var(--t-md)/1.6 var(--f-body);
+}
+.page { max-width: 1120px; margin: 0 auto; padding-inline: var(--s-4); padding-block: var(--s-6) var(--s-7); display: grid; gap: var(--s-7); }
+.sheet { background: var(--paper); border-radius: 2px; }
+h1, h2, h3 { font-family: var(--f-display); text-wrap: balance; margin: 0; letter-spacing: -.01em; }
+h1 { font-size: var(--t-hero); line-height: 1.02; font-weight: 800; }
+h2 { font-size: var(--t-xl); line-height: 1.1; font-weight: 700; }
+p { margin: 0; }
+.eyebrow { font: 500 var(--t-xs)/1.4 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+.lede { font-size: var(--t-lg); color: var(--ink-2); max-width: 62ch; }
+.muted { color: var(--ink-3); }
+.num { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+
+/* ── header ── */
+header { display: grid; gap: var(--s-4); padding-block: var(--s-2); }
+header h1 em { font-style: normal; color: var(--accent); }
+.pieces-row { display: flex; gap: 6px; align-items: end; height: 28px; }
+.pieces-row canvas { display: block; }
+
+/* ── section heads ── */
+section { display: grid; gap: var(--s-5); }
+.sec-head { display: grid; gap: var(--s-2); max-width: 70ch; }
+.sec-head p { color: var(--ink-2); }
+
+/* ── wells ── */
+.well {
+  background: var(--well); color: var(--well-ink); border-radius: 10px; padding: var(--s-3);
+  display: grid; gap: var(--s-3); box-shadow: 0 1px 0 rgba(255,255,255,.04) inset, 0 18px 40px -24px rgba(10, 14, 40, .55);
+  min-width: 0;
+}
+.well canvas.board { width: 100%; height: auto; display: block; border-radius: 4px; background: var(--well-2); image-rendering: auto; }
+.hud { display: flex; justify-content: space-between; gap: var(--s-2); font-family: var(--f-pixel); font-size: .7rem; letter-spacing: .04em; color: var(--well-ink-2); }
+.hud b { display: block; font-weight: 400; color: var(--well-ink); font-size: 1.15rem; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.hud .flash { animation: flash .9s ease-out; }
+@keyframes flash { 0% { color: var(--key-on); transform: scale(1.25); } 100% { color: var(--well-ink); transform: scale(1); } }
+.well-title { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-2); }
+.well-title .tag { font: 500 var(--t-xs)/1.2 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--well-ink-2); }
+.well-title .it { font-family: var(--f-pixel); font-size: .8rem; color: var(--key-on); }
+
+/* ── triptych ── */
+.triptych { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-4); }
+.trip-col { display: grid; gap: var(--s-3); align-content: start; min-width: 0; }
+.trip-col .caption { font-size: var(--t-sm); color: var(--ink-2); }
+.trip-col .caption strong { color: var(--ink); font-weight: 600; }
+.arrow-row { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--s-4); }
+@media (max-width: 640px) {
+  .triptych { gap: var(--s-2); }
+  .triptych .well { padding: var(--s-2); }
+  .hud { font-size: .55rem; }
+  .hud b { font-size: .85rem; }
+}
+
+/* ── explorer ── */
+.explorer { display: grid; grid-template-columns: minmax(220px, 300px) minmax(0, 1fr); gap: var(--s-5); align-items: start; }
+@media (max-width: 760px) { .explorer { grid-template-columns: minmax(0, 1fr); } .explorer .well { max-width: 320px; } }
+.panel { background: var(--card); border: 1px solid var(--rule); border-radius: 10px; padding: var(--s-4); display: grid; gap: var(--s-4); min-width: 0; }
+.keys { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.key { background: var(--key); color: var(--well-ink-2); border-radius: 6px; padding: 6px 4px; text-align: center; font: 500 .62rem/1.15 var(--f-mono); letter-spacing: .02em; transition: background .08s, color .08s, transform .08s; }
+.key span { display: block; font-size: 1rem; line-height: 1.2; }
+.key.on { background: var(--key-on); color: #1a1500; transform: translateY(1px); }
+
+.scrub { display: grid; gap: var(--s-2); }
+.scrub-top { display: flex; justify-content: space-between; align-items: baseline; gap: var(--s-3); flex-wrap: wrap; }
+.scrub-top .big { font: 700 var(--t-xl)/1 var(--f-display); }
+.scrub-top .big small { font: 500 var(--t-sm) var(--f-mono); color: var(--ink-3); margin-left: 4px; }
+input[type="range"] { width: 100%; accent-color: var(--accent); height: 28px; }
+.ticks { display: flex; justify-content: space-between; font: 400 var(--t-xs) var(--f-mono); color: var(--ink-3); }
+
+.controls { display: flex; gap: var(--s-2); flex-wrap: wrap; align-items: center; }
+button { font: 500 var(--t-sm) var(--f-body); color: var(--ink); background: var(--paper-2); border: 1px solid var(--rule); border-radius: 8px; padding: 7px 12px; cursor: pointer; }
+button:hover { border-color: var(--ink-3); }
+button:focus-visible, input:focus-visible, .film button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button.primary { background: var(--ink); color: var(--paper); border-color: var(--ink); min-width: 92px; }
+.seg { display: inline-flex; border: 1px solid var(--rule); border-radius: 8px; overflow: hidden; }
+.seg button { border: 0; border-radius: 0; background: transparent; padding: 7px 10px; font-family: var(--f-mono); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.spacer { flex: 1; }
+
+.stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--s-3); }
+@media (max-width: 520px) { .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.stat { display: grid; gap: 2px; padding-top: var(--s-2); border-top: 2px solid var(--rule); min-width: 0; }
+.stat .k { font: 500 var(--t-xs)/1.3 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.stat .v { font: 600 1.4rem/1.1 var(--f-mono); font-variant-numeric: tabular-nums; }
+.stat .d { font-size: var(--t-xs); color: var(--ink-3); }
+
+/* chart */
+.chart-wrap { position: relative; }
+.chart-wrap svg { width: 100%; height: auto; display: block; overflow: visible; }
+.legend { display: flex; gap: var(--s-4); flex-wrap: wrap; font-size: var(--t-xs); color: var(--ink-2); }
+.legend i { display: inline-block; vertical-align: middle; margin-right: 6px; }
+.tip { position: absolute; pointer-events: none; background: var(--ink); color: var(--paper); font: 400 var(--t-xs)/1.45 var(--f-mono); padding: 6px 8px; border-radius: 6px; white-space: nowrap; transform: translate(-50%, -110%); }
+
+/* film strip */
+.film-wrap { overflow-x: auto; padding-bottom: var(--s-2); }
+.film { display: flex; gap: var(--s-2); width: max-content; }
+.film button { background: var(--well); border: 2px solid transparent; border-radius: 6px; padding: 4px; display: grid; gap: 3px; cursor: pointer; color: var(--well-ink-2); }
+.film button canvas { display: block; border-radius: 2px; }
+.film button .l { font: 400 .58rem/1 var(--f-pixel); text-align: center; }
+.film button[aria-current="true"] { border-color: var(--key-on); color: var(--key-on); }
+
+/* method */
+.method { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: var(--s-4) var(--s-5); }
+.method dl { margin: 0; display: grid; gap: var(--s-3); }
+.method dt { font: 500 var(--t-xs)/1.3 var(--f-mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink-3); }
+.method dd { margin: 2px 0 0; color: var(--ink-2); font-size: var(--t-sm); }
+.method dd b { color: var(--ink); font-weight: 600; }
+footer { font-size: var(--t-xs); color: var(--ink-3); }
+
+@media (prefers-reduced-motion: reduce) { .key, .hud .flash { transition: none; animation: none; } }
+</style>
+
+<main class="page">
+  <header>
+    <div class="pieces-row" id="logo" aria-hidden="true"></div>
+    <p class="eyebrow">Reinforcement learning · PPO · Tetris</p>
+    <h1>Watching a network <em>learn</em> Tetris</h1>
+    <p class="lede" id="lede">Every board on this page is a real game, played by the same neural network at different points in its training. Nobody showed it how to play: it only saw a score.</p>
+  </header>
+
+  <section aria-labelledby="h-trip">
+    <div class="sec-head">
+      <p class="eyebrow">Three snapshots</p>
+      <h2 id="h-trip">Before, during and after training</h2>
+      <p id="trip-sub">The same network, frozen at three moments of its training, each playing a typical game.</p>
+    </div>
+    <div class="triptych" id="triptych"></div>
+  </section>
+
+  <section aria-labelledby="h-exp">
+    <div class="sec-head">
+      <p class="eyebrow">Explore the run</p>
+      <h2 id="h-exp">Scrub through training</h2>
+      <p>Drag the slider to pick a checkpoint. The board replays a typical game from that checkpoint: the one whose score is closest to the median of <span class="num" id="n-games">30</span> test games. The keys show what the network pressed at each step.</p>
+    </div>
+    <div class="explorer">
+      <div class="well" id="big-well"></div>
+      <div class="panel">
+        <div class="scrub">
+          <div class="scrub-top">
+            <div class="big">Iteration <span class="num" id="cur-it">0</span><small id="cur-steps"></small></div>
+            <div class="controls">
+              <button class="primary" id="play" type="button">Pause</button>
+              <button id="restart" type="button">Restart</button>
+              <div class="seg" role="group" aria-label="Playback speed" id="speed"></div>
+            </div>
+          </div>
+          <input type="range" id="slider" min="0" max="0" step="1" value="0" aria-label="Training checkpoint">
+          <div class="ticks"><span>untrained</span><span id="tick-end"></span></div>
+        </div>
+        <div class="stats" id="stats"></div>
+        <div class="chart-wrap" id="chart"></div>
+        <div class="legend" id="legend"></div>
+      </div>
+    </div>
+    <div class="sec-head">
+      <p class="eyebrow">Final boards</p>
+      <p>The last moment of each checkpoint's typical game, from untrained (left) to fully trained (right). Click a board to replay that game.</p>
+    </div>
+    <div class="film-wrap"><div class="film" id="film"></div></div>
+  </section>
+
+  <section aria-labelledby="h-method">
+    <div class="sec-head">
+      <p class="eyebrow">How it was made</p>
+      <h2 id="h-method">The setup</h2>
+    </div>
+    <div class="method" id="method"></div>
+  </section>
+
+  <footer id="footer"></footer>
+</main>
+
+<script>
+const DATA = /*__DATA__*/null;
+
+// ── constants ───────────────────────────────────────────────────
+const W = DATA.width, H = DATA.height;
+// piece codes 1..7 = I O T S Z J L
+const COLORS = [null, "#3fc6dc", "#f2c84b", "#a46cf0", "#4cc77f", "#ef5f5b", "#4f7cf2", "#f39a3d"];
+const KEYS = [["←", "Left"], ["→", "Right"], ["↓", "Down"], ["↻", "Rotate"], ["↺", "Rotate"], ["⤓", "Drop"], ["⇄", "Hold"], ["·", "Wait"]];
+const CK = DATA.checkpoints;
+const TOTAL = CK[CK.length - 1].iter;
+const STEPS_PER_IT = DATA.history.length ? DATA.history[0].steps : 0;
+const BASE_FPS = 14;
+const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const fmt = (x, d = 0) => x == null ? "–" : x.toLocaleString("en-US", { maximumFractionDigits: d, minimumFractionDigits: d });
+const fmtSteps = s => s >= 1e6 ? fmt(s / 1e6, 1) + "M" : s >= 1e3 ? fmt(s / 1e3, 0) + "k" : fmt(s);
+
+// pieces placed per frame (each placed piece is worth +1, cleared lines add 10·n²)
+for (const c of CK) {
+  const r = c.replay; let p = 0;
+  r.pieces = r.scores.map((s, i) => (i > 0 && s > r.scores[i - 1] ? ++p : p));
+}
+
+// ── board drawing ───────────────────────────────────────────────
+function shade(hex, f) {
+  const n = parseInt(hex.slice(1), 16), ch = [n >> 16, (n >> 8) & 255, n & 255];
+  return `rgb(${ch.map(v => Math.round(f > 0 ? v + (255 - v) * f : v * (1 + f))).join(",")})`;
+}
+function makeBoard(cell) {
+  const cv = document.createElement("canvas");
+  const dpr = Math.min(window.devicePixelRatio || 1, 2);
+  cv.width = W * cell * dpr; cv.height = H * cell * dpr;
+  cv.style.aspectRatio = `${W} / ${H}`;
+  const ctx = cv.getContext("2d"); ctx.scale(dpr, dpr);
+  return { cv, ctx, cell };
+}
+function draw(b, frame, ghostTop = false) {
+  const { ctx, cell } = b;
+  ctx.fillStyle = "#181d36"; ctx.fillRect(0, 0, W * cell, H * cell);
+  ctx.strokeStyle = "#1f2542"; ctx.lineWidth = 1;
+  if (cell >= 8) {
+    ctx.beginPath();
+    for (let x = 1; x < W; x++) { ctx.moveTo(x * cell + .5, 0); ctx.lineTo(x * cell + .5, H * cell); }
+    for (let y = 1; y < H; y++) { ctx.moveTo(0, y * cell + .5); ctx.lineTo(W * cell, y * cell + .5); }
+    ctx.stroke();
+  }
+  const g = cell >= 8 ? 1 : 0.5;
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const c = +frame[y * W + x]; if (!c) continue;
+    const px = x * cell + g, py = y * cell + g, s = cell - 2 * g, col = COLORS[c];
+    ctx.fillStyle = col; ctx.fillRect(px, py, s, s);
+    if (cell >= 8) {
+      const e = Math.max(2, cell * .14);
+      ctx.fillStyle = shade(col, .35); ctx.fillRect(px, py, s, e); ctx.fillRect(px, py, e, s);
+      ctx.fillStyle = shade(col, -.3); ctx.fillRect(px, py + s - e, s, e); ctx.fillRect(px + s - e, py, e, s);
+    }
+  }
+}
+
+// ── a replay player (one per well) ─────────────────────────────
+function Player(el, { cell, keys = false, title }) {
+  el.innerHTML = "";
+  const head = document.createElement("div"); head.className = "well-title";
+  head.innerHTML = `<span class="tag">${title || ""}</span><span class="it"></span>`;
+  const board = makeBoard(cell); board.cv.className = "board";
+  const hud = document.createElement("div"); hud.className = "hud";
+  hud.innerHTML = `<div>Score<b>0</b></div><div>Lines<b>0</b></div><div>Pieces<b>0</b></div>`;
+  el.append(head, board.cv, hud);
+  let keyEls = [];
+  if (keys) {
+    const k = document.createElement("div"); k.className = "keys"; k.setAttribute("aria-label", "Buttons pressed by the network");
+    k.innerHTML = KEYS.map(([s, n]) => `<div class="key"><span>${s}</span>${n}</div>`).join("");
+    el.append(k); keyEls = [...k.children];
+  }
+  const [sEl, lEl, pEl] = hud.querySelectorAll("b");
+  const itEl = head.querySelector(".it"), tagEl = head.querySelector(".tag");
+  const st = { ck: null, i: 0, hold: 0 };
+  function render() {
+    const r = st.ck.replay, i = Math.min(st.i, r.frames.length - 1);
+    draw(board, r.frames[i]);
+    sEl.textContent = fmt(r.scores[i]);
+    if (+lEl.textContent !== r.lines_t[i]) { lEl.textContent = r.lines_t[i]; if (r.lines_t[i] > 0) { lEl.classList.remove("flash"); void lEl.offsetWidth; lEl.classList.add("flash"); } }
+    pEl.textContent = r.pieces[i];
+    keyEls.forEach((k, j) => k.classList.toggle("on", i < r.actions.length && r.actions[i] === j));
+  }
+  return {
+    set(ck, atEnd = false) { st.ck = ck; st.i = atEnd ? ck.replay.frames.length - 1 : 0; st.hold = 0; itEl.textContent = `IT ${ck.iter}`; lEl.textContent = "0"; render(); },
+    setTitle(t) { tagEl.textContent = t; },
+    restart() { st.i = 0; st.hold = 0; render(); },
+    tick() { // advance one frame; hold the final board ~1.5s, then loop
+      const n = st.ck.replay.frames.length;
+      if (st.i < n - 1) st.i++; else if (++st.hold > BASE_FPS * 1.5) { st.i = 0; st.hold = 0; lEl.textContent = "0"; }
+      render();
+    },
+  };
+}
+
+// ── shared clock ────────────────────────────────────────────────
+const clocks = [];
+function startClock(fn, speedRef) {
+  const c = { fn, speedRef, acc: 0, on: !reduceMotion }; clocks.push(c); return c;
+}
+let last = performance.now();
+function loop(now) {
+  const dt = Math.min(now - last, 250) / 1000; last = now;
+  for (const c of clocks) if (c.on) { c.acc += dt * BASE_FPS * c.speedRef(); while (c.acc >= 1) { c.acc--; c.fn(); } }
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+
+// ── header logo (the seven pieces) ──────────────────────────────
+(() => {
+  const shapes = [[[1,1,1,1]], [[2,2],[2,2]], [[0,3,0],[3,3,3]], [[0,4,4],[4,4,0]], [[5,5,0],[0,5,5]], [[6,0,0],[6,6,6]], [[0,0,7],[7,7,7]]];
+  const logo = document.getElementById("logo"), cell = 7;
+  for (const s of shapes) {
+    const cv = document.createElement("canvas"), dpr = Math.min(devicePixelRatio || 1, 2);
+    cv.width = s[0].length * cell * dpr; cv.height = s.length * cell * dpr;
+    cv.style.width = s[0].length * cell + "px"; cv.style.height = s.length * cell + "px";
+    const ctx = cv.getContext("2d"); ctx.scale(dpr, dpr);
+    s.forEach((row, y) => row.forEach((c, x) => { if (c) { ctx.fillStyle = COLORS[c]; ctx.fillRect(x * cell + .5, y * cell + .5, cell - 1, cell - 1); } }));
+    logo.append(cv);
+  }
+})();
+
+// ── numbers for the copy ────────────────────────────────────────
+const first = CK[0], lastCk = CK[CK.length - 1];
+const best = CK.reduce((a, b) => (b.score_mean > a.score_mean ? b : a));
+const totalSteps = DATA.history.length ? DATA.history[DATA.history.length - 1].steps : 0;
+const minutes = DATA.history.length ? DATA.history[DATA.history.length - 1].seconds / 60 : 0;
+document.getElementById("lede").textContent =
+  `Every board on this page is a real game, played by the same neural network at different points in its training. ` +
+  `Nobody showed it how to play: it only saw a score. Over ${fmtSteps(totalSteps)} moves of practice, its average game went from ` +
+  `${fmt(first.score_mean)} to ${fmt(lastCk.score_mean)} points, mostly by surviving longer. ` +
+  `Clearing lines is still rare: ${fmt(lastCk.lines_mean, 1)} per game at the end, up from ${fmt(first.lines_mean, 1)}.`;
+document.getElementById("n-games").textContent = DATA.games;
+
+// ── triptych ────────────────────────────────────────────────────
+(() => {
+  const mid = CK.reduce((a, b) => Math.abs(b.score_mean - (first.score_mean + lastCk.score_mean) / 2) < Math.abs(a.score_mean - (first.score_mean + lastCk.score_mean) / 2) ? b : a);
+  const picks = [[first, "Untrained"], [mid, "Halfway there"], [lastCk, "Fully trained"]];
+  const root = document.getElementById("triptych");
+  const players = picks.map(([ck, label]) => {
+    const col = document.createElement("div"); col.className = "trip-col";
+    const w = document.createElement("div"); w.className = "well";
+    const cap = document.createElement("p"); cap.className = "caption";
+    cap.innerHTML = `<strong>Iteration ${ck.iter}</strong> · averages <span class="num">${fmt(ck.score_mean)}</span> points and <span class="num">${fmt(ck.lines_mean, 1)}</span> lines per game.`;
+    col.append(w, cap); root.append(col);
+    const p = Player(w, { cell: 22, title: label }); p.set(ck, reduceMotion); return p;
+  });
+  startClock(() => players.forEach(p => p.tick()), () => 1);
+  document.getElementById("trip-sub").textContent =
+    `The same network, frozen at three moments of its training: before it learned anything, when it had reached half of its final score, and at the end. Each plays a typical game.`;
+})();
+
+// ── explorer ────────────────────────────────────────────────────
+const big = Player(document.getElementById("big-well"), { cell: 26, keys: true, title: "Replay" });
+let speed = 1, sel = CK.length - 1;
+const clock = startClock(() => big.tick(), () => speed);
+const playBtn = document.getElementById("play");
+const setPlaying = on => { clock.on = on; playBtn.textContent = on ? "Pause" : "Play"; };
+setPlaying(clock.on);
+playBtn.onclick = () => setPlaying(!clock.on);
+document.getElementById("restart").onclick = () => big.restart();
+const speedEl = document.getElementById("speed");
+[1, 2, 4, 8].forEach(s => {
+  const b = document.createElement("button"); b.type = "button"; b.textContent = s + "×"; b.setAttribute("aria-pressed", s === speed);
+  b.onclick = () => { speed = s; [...speedEl.children].forEach(x => x.setAttribute("aria-pressed", x === b)); };
+  speedEl.append(b);
+});
+const slider = document.getElementById("slider");
+slider.max = CK.length - 1; slider.value = sel;
+document.getElementById("tick-end").textContent = `iteration ${TOTAL}`;
+slider.oninput = () => select(+slider.value);
+
+const statsEl = document.getElementById("stats");
+function renderStats(ck) {
+  const r = ck.replay;
+  const rows = [
+    ["This game", fmt(r.score), `${r.lines} lines · ${r.pieces[r.pieces.length - 1]} pieces`],
+    ["Avg score", fmt(ck.score_mean), `middle half ${fmt(ck.score_p25)}–${fmt(ck.score_p75)}`],
+    ["Lines / game", fmt(ck.lines_mean, 1), `best game ${ck.lines_max}`],
+    ["Best game", fmt(ck.score_max), `of ${DATA.games} test games`],
+  ];
+  statsEl.innerHTML = rows.map(([k, v, d]) => `<div class="stat"><span class="k">${k}</span><span class="v">${v}</span><span class="d">${d}</span></div>`).join("");
+}
+
+// ── chart ──────────────────────────────────────────────────────
+const chart = (() => {
+  const VW = 720, VH = 250, m = { l: 44, r: 12, t: 12, b: 30 };
+  const hist = DATA.history.filter(h => h.return != null);
+  const yMaxRaw = Math.max(...hist.map(h => h.return), ...CK.map(c => c.score_p75));
+  const step = [5, 10, 20, 25, 50, 100, 200, 250, 500, 1000].find(s => yMaxRaw / s <= 5) || 2000;
+  const yMax = Math.ceil(yMaxRaw / step) * step;
+  const x = it => m.l + (it / TOTAL) * (VW - m.l - m.r);
+  const y = v => VH - m.b - (v / yMax) * (VH - m.t - m.b);
+  const NS = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(NS, "svg");
+  svg.setAttribute("viewBox", `0 0 ${VW} ${VH}`); svg.setAttribute("role", "img");
+  svg.setAttribute("aria-label", `Average score per game over training, from ${fmt(first.score_mean)} to ${fmt(lastCk.score_mean)}`);
+  const el = (tag, attrs, parent = svg) => { const e = document.createElementNS(NS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); parent.append(e); return e; };
+  for (let v = 0; v <= yMax; v += step) {
+    el("line", { x1: m.l, x2: VW - m.r, y1: y(v), y2: y(v), stroke: "var(--rule)", "stroke-width": 1 });
+    el("text", { x: m.l - 8, y: y(v) + 4, "text-anchor": "end", fill: "var(--ink-3)", "font-size": 11, "font-family": "var(--f-mono)" }).textContent = v;
+  }
+  const xStep = [10, 20, 25, 50, 100, 200, 250, 500].find(s => TOTAL / s <= 6) || 1000;
+  for (let it = 0; it <= TOTAL; it += xStep)
+    el("text", { x: x(it), y: VH - 10, "text-anchor": "middle", fill: "var(--ink-3)", "font-size": 11, "font-family": "var(--f-mono)" }).textContent = it;
+  el("text", { x: VW - m.r, y: VH - 10, "text-anchor": "end", fill: "var(--ink-3)", "font-size": 11, "font-family": "var(--f-body)" }).textContent = "";
+  // training curve: area + line
+  const pts = hist.map(h => [x(h.iter), y(h.return)]);
+  el("path", { d: `M${pts[0][0]},${y(0)} ` + pts.map(p => `L${p[0]},${p[1]}`).join(" ") + ` L${pts[pts.length - 1][0]},${y(0)} Z`, fill: "var(--accent-soft)" });
+  el("path", { d: "M" + pts.map(p => p.join(",")).join(" L"), fill: "none", stroke: "var(--accent)", "stroke-width": 2, "stroke-linejoin": "round" });
+  // evaluation: middle-half whiskers + mean dots
+  for (const c of CK) {
+    el("line", { x1: x(c.iter), x2: x(c.iter), y1: y(c.score_p25), y2: y(c.score_p75), stroke: "var(--eval)", "stroke-width": 2, "stroke-linecap": "round", opacity: .55 });
+  }
+  const dots = CK.map(c => el("circle", { cx: x(c.iter), cy: y(c.score_mean), r: 4, fill: "var(--eval)", stroke: "var(--card)", "stroke-width": 2 }));
+  const marker = el("line", { y1: m.t, y2: VH - m.b, stroke: "var(--ink)", "stroke-width": 1, "stroke-dasharray": "3 3" });
+  const selDot = el("circle", { r: 7, fill: "none", stroke: "var(--ink)", "stroke-width": 2 });
+  // hover
+  const hover = el("rect", { x: m.l, y: m.t, width: VW - m.l - m.r, height: VH - m.t - m.b, fill: "transparent", style: "cursor:pointer" });
+  const wrap = document.getElementById("chart"); wrap.append(svg);
+  const tip = document.createElement("div"); tip.className = "tip"; tip.hidden = true; wrap.append(tip);
+  const nearestCk = it => CK.reduce((a, b, i) => (Math.abs(b.iter - it) < Math.abs(CK[a].iter - it) ? i : a), 0);
+  const itFromEvent = e => { const r = svg.getBoundingClientRect(); return ((e.clientX - r.left) / r.width * VW - m.l) / (VW - m.l - m.r) * TOTAL; };
+  hover.addEventListener("pointermove", e => {
+    const it = Math.max(0, Math.min(TOTAL, itFromEvent(e)));
+    const h = hist.reduce((a, b) => (Math.abs(b.iter - it) < Math.abs(a.iter - it) ? b : a));
+    const c = CK[nearestCk(it)];
+    const r = svg.getBoundingClientRect();
+    tip.hidden = false;
+    tip.style.left = (x(c.iter) / VW * r.width) + "px"; tip.style.top = (y(c.score_mean) / VH * r.height) + "px";
+    tip.innerHTML = `iteration ${c.iter}<br>test avg ${fmt(c.score_mean)} · lines ${fmt(c.lines_mean, 1)}<br>training avg ${fmt(h.return)} (it ${h.iter})`;
+  });
+  hover.addEventListener("pointerleave", () => (tip.hidden = true));
+  hover.addEventListener("click", e => select(nearestCk(itFromEvent(e))));
+  document.getElementById("legend").innerHTML =
+    `<span><i style="width:18px;height:2px;background:var(--accent)"></i>Training games, average per iteration</span>` +
+    `<span><i style="width:8px;height:8px;border-radius:50%;background:var(--eval)"></i>Test average at each checkpoint (bar: middle half of ${DATA.games} games)</span>`;
+  return { mark(ck) { marker.setAttribute("x1", x(ck.iter)); marker.setAttribute("x2", x(ck.iter)); selDot.setAttribute("cx", x(ck.iter)); selDot.setAttribute("cy", y(ck.score_mean)); } };
+})();
+
+// ── film strip ─────────────────────────────────────────────────
+const film = document.getElementById("film");
+const filmBtns = CK.map((c, i) => {
+  const b = document.createElement("button"); b.type = "button"; b.setAttribute("aria-label", `Iteration ${c.iter}, score ${fmt(c.replay.score)}`);
+  const bd = makeBoard(6); bd.cv.style.width = W * 6 + "px"; bd.cv.style.height = H * 6 + "px";
+  draw(bd, c.replay.frames[c.replay.frames.length - 1]);
+  const l = document.createElement("span"); l.className = "l"; l.textContent = c.iter;
+  b.append(bd.cv, l); b.onclick = () => select(i); film.append(b); return b;
+});
+
+function select(i) {
+  sel = i; const ck = CK[i];
+  slider.value = i;
+  document.getElementById("cur-it").textContent = ck.iter;
+  document.getElementById("cur-steps").textContent = STEPS_PER_IT ? `${fmtSteps(ck.iter * STEPS_PER_IT)} moves of practice` : "";
+  big.set(ck, !clock.on); big.setTitle(ck.iter === 0 ? "Untrained" : ck === lastCk ? "Fully trained" : "Replay");
+  renderStats(ck); chart.mark(ck);
+  filmBtns.forEach((b, j) => b.setAttribute("aria-current", j === i));
+  filmBtns[i].scrollIntoView({ block: "nearest", inline: "nearest" });
+}
+select(sel);
+window.scrollTo(0, 0);
+
+// ── method ─────────────────────────────────────────────────────
+document.getElementById("method").innerHTML = `
+  <dl>
+    <div><dt>The game</dt><dd><b>10 × 20 Tetris</b> with gravity (tetris-gymnasium). Each step the network presses one of 8 buttons: left, right, down, rotate either way, hard drop, hold, or wait.</dd></div>
+    <div><dt>What it sees</dt><dd><b>13 numbers</b> describing the stack: the height of each of the 10 columns, the tallest column, the number of holes, and how bumpy the surface is.</dd></div>
+  </dl>
+  <dl>
+    <div><dt>What it is rewarded for</dt><dd><b>+1</b> for every piece placed and <b>+10 × lines²</b> for clearing lines (10 for one line, 160 for a Tetris). Nothing else.</dd></div>
+    <div><dt>The network</dt><dd>A policy network and a value network, each with <b>4 hidden layers of 256 units</b>.</dd></div>
+  </dl>
+  <dl>
+    <div><dt>Training</dt><dd><b>PPO</b> on <b>16 games in parallel</b>: ${fmt(TOTAL)} iterations × ${fmtSteps(STEPS_PER_IT)} moves = <b>${fmtSteps(totalSteps)} moves</b>, in about ${fmt(minutes)} minutes.</dd></div>
+    <div><dt>Testing</dt><dd>Every ${CK.length > 1 ? CK[1].iter - CK[0].iter : 0} iterations the network was saved and played <b>${DATA.games} test games</b>. Replays show the game closest to the median score, not the best one.${lastCk.capped ? ` Games were stopped after ${fmt(DATA.max_steps)} moves.` : ""}</dd></div>
+  </dl>`;
+document.getElementById("footer").textContent =
+  `Best test average: ${fmt(best.score_mean)} points at iteration ${best.iter}. Generated by tetris/replays.py from the PPO run in tetris/runs/ppo_scaled.`;
+</script>
