@@ -276,6 +276,8 @@ def _run_training(reasoning_gym_args, training_args, model_args, logger):
         log_reward_variance=reasoning_gym_args.log_reward_variance,
         verbose_variance_logging=reasoning_gym_args.verbose_variance_logging,
         batch_counts_as_step=reasoning_gym_args.batch_counts_as_step,
+        binary_accuracy_reward=reasoning_gym_args.binary_accuracy_reward,
+        strict_format_reward=reasoning_gym_args.strict_format_reward,
     )
     
     # Log parameter info

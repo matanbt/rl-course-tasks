@@ -45,7 +45,11 @@ class DatasetConfig:
     # Variance logging
     log_reward_variance: bool = field(default=True)
     verbose_variance_logging: bool = field(default=False)
-    
+
+    # Reward shaping (see CustomGRPOTrainer)
+    binary_accuracy_reward: bool = field(default=False)  # If True, accuracy reward is 1 only for an exact answer (score >= 1, the eval's test), else 0
+    strict_format_reward: bool = field(default=False)  # If True, half the format reward requires the clean layout (see grpo/formatting.py)
+
     # Resume control
     auto_resume: bool = field(default=False)  # If True, auto-resume from last checkpoint
     

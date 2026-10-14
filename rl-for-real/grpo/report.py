@@ -25,7 +25,8 @@ SETTING_KEYS = [
     "dataset_size", "datasets", "eval_datasets", "eval_num_samples", "fixed_eval_steps",
     "max_steps", "per_device_train_batch_size", "gradient_accumulation_steps", "num_generations",
     "learning_rate", "lr_scheduler_type", "warmup_steps", "warmup_ratio", "beta", "loss_type",
-    "reward_weights", "max_prompt_length", "max_completion_length", "mask_truncated_completions",
+    "reward_weights", "binary_accuracy_reward", "strict_format_reward",
+    "max_prompt_length", "max_completion_length", "mask_truncated_completions",
     "temperature", "eval_temperature", "use_peft", "lora_r", "lora_alpha", "lora_dropout", "bf16", "seed",
 ]
 

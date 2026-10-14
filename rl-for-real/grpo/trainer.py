@@ -10,6 +10,7 @@ from trl import GRPOConfig, GRPOTrainer
 from reasoning_gym.utils import extract_answer
 
 from .dataset import ReasoningGymDataset
+from .formatting import format_issues
 
 # Try to import wandb for logging (optional)
 try:
@@ -24,11 +25,11 @@ class CustomGRPOTrainer(GRPOTrainer):
     Extended GRPOTrainer with reasoning-gym reward functions.
     
     Includes:
-        - Accuracy reward based on reasoning-gym's scoring
-        - Format reward for proper <think>/<answer> tags
+        - Accuracy reward based on reasoning-gym's scoring (optionally binary: exact answers only, as in eval)
+        - Format reward for proper <think>/<answer> tags (optionally strict: also requires the clean layout)
         - Optional reward variance logging
     """
-    
+
     def __init__(
         self,
         model,
@@ -39,6 +40,8 @@ class CustomGRPOTrainer(GRPOTrainer):
         log_reward_variance: bool = True,
         verbose_variance_logging: bool = False,
         batch_counts_as_step: bool = False,
+        binary_accuracy_reward: bool = False,
+        strict_format_reward: bool = False,
     ):
         super().__init__(
             model=model,
@@ -54,6 +57,8 @@ class CustomGRPOTrainer(GRPOTrainer):
         self.log_reward_variance = log_reward_variance
         self.verbose_variance_logging = verbose_variance_logging
         self.batch_counts_as_step = batch_counts_as_step
+        self.binary_accuracy_reward = binary_accuracy_reward
+        self.strict_format_reward = strict_format_reward
         self._step_count = 0
     
     def log(self, logs: dict, start_time: float = None) -> None:
@@ -116,10 +121,14 @@ class CustomGRPOTrainer(GRPOTrainer):
         
         answers = [extract_answer(c) for c in completions]
         rewards = [
-            self.train_dataset.data.score_answer(answer, item) 
+            self.train_dataset.data.score_answer(answer, item)
             for answer, item in zip(answers, kwargs["item"])
         ]
-        
+        if self.binary_accuracy_reward:
+            # The eval only counts score >= 1 as correct. Partial credit (e.g. the true answer appearing inside a
+            # longer answer) would reward the model for putting its working in the answer tags.
+            rewards = [1.0 if r >= 1.0 else 0.0 for r in rewards]
+
         if self.log_reward_variance:
             self._log_variance(rewards, answers, completions)
 
@@ -233,4 +242,9 @@ class CustomGRPOTrainer(GRPOTrainer):
                 count += 0.25
             return count
 
-        return [count_tags(c) for c in completions]
+        if not self.strict_format_reward:
+            return [count_tags(c) for c in completions]
+        # Strict: the tags earn up to 0.5, and the other 0.5 needs a clean layout (one <think>, then one single-line
+        # <answer>, nothing else). The eval scores only the last <answer>, so extra or chatty answers lose points.
+        # Keeping the per-tag part leaves a gradient from untagged answers towards tagged ones.
+        return [0.5 * count_tags(c) + (0.5 if not format_issues(c) else 0.0) for c in completions]
