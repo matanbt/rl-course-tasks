@@ -14,7 +14,7 @@ run_name: grpo
 # =============================================================================
 
 dataset_size: 20000
-developer_prompt: ImprovedCompact  # Strict-format prompt, hosted in grpo/prompts.py (DeepSeekZero is the original); short enough for the eval's 512-token prompt limit
+developer_prompt: Focused  # Format rules + follow the question + ~300-word thinking budget, hosted in grpo/prompts.py (DeepSeekZero is the original)
 developer_role: system
 
 # Training datasets (from reasoning-gym)
