@@ -92,10 +92,11 @@ def _apply_lora(model, model_args, logger):
     lora_dropout = getattr(model_args, 'lora_dropout', 0.05)
     target_modules = getattr(model_args, 'lora_target_modules', None)
     
-    # Handle "all-linear" shortcut
-    if target_modules == "all-linear":
-        target_modules = None  # PEFT will auto-detect all linear layers
-        
+    # "all-linear" (a string from the yaml, a one-element list from the CLI) is PEFT's shorthand for every linear
+    # layer except the output head. None would instead mean PEFT's per-model default: only q_proj/v_proj for Qwen2.
+    if target_modules in ("all-linear", ["all-linear"]):
+        target_modules = "all-linear"
+
     lora_config = LoraConfig(
         r=lora_r,
         lora_alpha=lora_alpha,
@@ -136,7 +137,8 @@ def _init_wandb(reasoning_gym_args, training_args, model_args, logger, mode="tra
         # Disable HuggingFace's automatic wandb integration - we'll log manually
         training_args.report_to = []
         
-        if wandb.run is None:
+        # Under multi-GPU launch, only the main process owns the wandb run
+        if wandb.run is None and training_args.process_index == 0:
             full_config = grpo.build_wandb_config(reasoning_gym_args, training_args, model_args)
             full_config["mode"] = mode
             
@@ -145,6 +147,7 @@ def _init_wandb(reasoning_gym_args, training_args, model_args, logger, mode="tra
                 name = f"{name}_eval" if name else "eval"
             
             wandb.init(
+                entity=os.environ.get("WANDB_ENTITY", "rl-4-real"),
                 project=os.environ.get("WANDB_PROJECT", "rl-for-real"),
                 name=name,
                 config=full_config,
@@ -274,6 +277,8 @@ def _run_training(reasoning_gym_args, training_args, model_args, logger):
         log_reward_variance=reasoning_gym_args.log_reward_variance,
         verbose_variance_logging=reasoning_gym_args.verbose_variance_logging,
         batch_counts_as_step=reasoning_gym_args.batch_counts_as_step,
+        binary_accuracy_reward=reasoning_gym_args.binary_accuracy_reward,
+        strict_format_reward=reasoning_gym_args.strict_format_reward,
     )
     
     # Log parameter info
