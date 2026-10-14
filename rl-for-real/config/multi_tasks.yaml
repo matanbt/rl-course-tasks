@@ -19,7 +19,9 @@ developer_role: system
 
 # Training datasets (from reasoning-gym)
 # Each dataset gets procedurally generated problems
-datasets: {"number_filtering": {}, "string_insertion": {}, "family_relationships": {}, "maze": {}}
+# family_relationships is upweighted: its questions ask for a single word, so the model answers without the answer
+# tags, every rollout scores 0 and its groups carry no learning signal. It is also the largest eval task.
+datasets: {"number_filtering": {}, "string_insertion": {}, "family_relationships": {"weight": 2.0}, "maze": {}}
 
 # Evaluation datasets (optional)
 # If not specified (null/omitted), uses the same config as training datasets.
@@ -40,42 +42,45 @@ model_name_or_path: Qwen/Qwen2.5-3B-Instruct
 auto_resume: false  # If true, auto-resume from last checkpoint in output_dir
 
 # Training steps
-max_steps: 200
+max_steps: 500
 batch_counts_as_step: false  # Note: this is used to compare runs with different batch-sizes - presenting results vs. train data (instead of vs. model updates).
 num_train_epochs: 1  # Note: in our setting, this is practically irrelevant, since max_steps does not allow reaching a second epoch anyway.
 
 # Batch sizes
-# Tuned for 4 GPUs via `accelerate launch --num_processes 4`:
-# 4 per device x 4 processes x 1 accumulation = 16 completions per step (same as the original 8 x 1 GPU x 2).
-# On a single GPU, use per_device_train_batch_size: 8 and gradient_accumulation_steps: 2 instead.
+# 4 per device x 2 accumulation = 8 completions per GPU per step, so the completions per step (8 x num_processes)
+# stay divisible by num_generations (8) with any number of GPUs, e.g. 4 GPUs -> 4 prompts x 8 rollouts per step.
 per_device_eval_batch_size: 64
 per_device_train_batch_size: 4
-gradient_accumulation_steps: 1
+gradient_accumulation_steps: 2
 
 # Learning rate
-learning_rate: 2e-6
+learning_rate: 2e-5  # LoRA needs a much higher learning rate than full fine-tuning (2e-6)
 warmup_ratio: 0.1
 lr_scheduler_type: constant_with_warmup
 lr_scheduler_kwargs:
   num_warmup_steps: 10
 
 # GRPO-specific
-num_generations: 4  # Rollouts per prompt
+num_generations: 8  # Rollouts per prompt (more rollouts -> more groups where some rollout differs, i.e. learning signal)
 reward_weights:  # Weights for [accuracy_reward, format_reward]
   - 1.0
   - 1.0
+binary_accuracy_reward: true  # Reward only exact answers, as the eval counts them (no partial credit)
+strict_format_reward: true  # Half the format reward needs one <think>, then one single-line <answer>, and nothing else
 max_completion_length: 384
 
 # Model behavior
-temperature: 0.6  # training temperature
-eval_temperature: 0.2  # eval temperature (0 = greedy/deterministic)
+temperature: 1.0  # training temperature (more exploration; at 0.6 family_relationships rollouts almost never used tags)
+eval_temperature: 0.0  # eval temperature (0 = greedy/deterministic, so evals differ only because the model did)
 
 # LORA
-use_peft: false
-lora_r: 256
-lora_alpha: 256
-lora_dropout: 0.05
-#lora_target_modules: all-linear  # optional: more capacity
+# The LoRA adapters train in fp32 (PEFT's default). Full fine-tuning updates the bf16 weights directly, and at lr 2e-6
+# most of those updates are below bf16 resolution and round away. LoRA learned faster in our runs.
+use_peft: true
+lora_r: 64
+lora_alpha: 64
+lora_dropout: 0.0  # dropout would add noise between the policy that samples the rollouts and the one being trained
+lora_target_modules: all-linear  # adapt every linear layer (unset = PEFT default, only q_proj/v_proj for Qwen2)
 
 # =============================================================================
 # Evaluation & Checkpointing
@@ -90,7 +95,7 @@ checkpoint_path: null      # Path to trained model/checkpoint for eval-only mode
 # Fixed evaluation settings
 eval_num_samples: 200
 eval_num_examples_to_print: 5
-fixed_eval_steps: 100  # Run fixed eval every N steps
+fixed_eval_steps: 20  # Run fixed eval every N steps (a multiple of logging_steps: evals run on logging steps)
 
 # Variance logging (helps diagnose exploration)
 log_reward_variance: true

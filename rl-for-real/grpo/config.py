@@ -45,7 +45,15 @@ class DatasetConfig:
     # Variance logging
     log_reward_variance: bool = field(default=True)
     verbose_variance_logging: bool = field(default=False)
+
+    # Reward shaping (see CustomGRPOTrainer)
+    binary_accuracy_reward: bool = field(default=False)  # If True, accuracy reward is 1 only for an exact answer (score >= 1, the eval's test), else 0
+    strict_format_reward: bool = field(default=False)  # If True, half the format reward requires the clean layout (see grpo/formatting.py)
     
+    # Training-only prompt hint (eval prompts are never changed, see grpo/dataset.py)
+    train_format_hint_tasks: Optional[list[str]] = field(default=None)  # Tasks whose training questions may get FORMAT_HINT
+    train_format_hint_ratio: float = field(default=0.5)  # Share of those tasks' training prompts that get it
+
     # Resume control
     auto_resume: bool = field(default=False)  # If True, auto-resume from last checkpoint
     
