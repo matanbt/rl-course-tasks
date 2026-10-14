@@ -96,7 +96,7 @@ def prepare_datasets(
         "composite", seed=1, size=config.dataset_size, datasets=train_dataset_specs
     )
     eval_data = reasoning_gym.create_dataset(
-        "composite", seed=2, size=config.eval_num_samples, datasets=eval_dataset_specs
+        "composite", seed=62, size=config.eval_num_samples, datasets=eval_dataset_specs
     )
     
     train_dataset = ReasoningGymDataset(
