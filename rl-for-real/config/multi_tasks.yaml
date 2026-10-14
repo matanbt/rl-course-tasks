@@ -21,7 +21,10 @@ developer_role: system
 # Each dataset gets procedurally generated problems
 # family_relationships is upweighted: its questions ask for a single word, so the model answers without the answer
 # tags, every rollout scores 0 and its groups carry no learning signal. It is also the largest eval task.
-datasets: {"number_filtering": {}, "string_insertion": {}, "family_relationships": {"weight": 2.0}, "maze": {}}
+# number_filtering and maze have the most headroom and need real reasoning; string_insertion is saturated (85-100% of
+# rollouts exact, so its groups rarely carry signal). Short-answer tasks dominating training made the reasoning shrink
+# over time (base_conversion 314 -> 187 tokens and 29 -> 2/36 correct in the best run).
+datasets: {"number_filtering": {"weight": 1.5}, "string_insertion": {"weight": 0.5}, "family_relationships": {"weight": 2.0}, "maze": {"weight": 1.5}}
 
 # Evaluation datasets (optional)
 # If not specified (null/omitted), uses the same config as training datasets.
@@ -65,9 +68,12 @@ num_generations: 8  # Rollouts per prompt (more rollouts -> more groups where so
 reward_weights:  # Weights for [accuracy_reward, format_reward]
   - 1.0
   - 1.0
-binary_accuracy_reward: true  # Reward only exact answers, as the eval counts them (no partial credit)
+binary_accuracy_reward: true  # Reward exact answers, as the eval counts them (no reasoning-gym partial credit)
+partial_credit_tasks: [number_filtering, maze]  # ...but credit closeness for these (grpo/partial_credit.py)
+partial_credit_max: 0.5
 strict_format_reward: true  # Half the format reward needs one <think>, then one single-line <answer>, and nothing else
-max_completion_length: 384
+overlong_penalty_start: 384  # The format reward drops linearly from 384 tokens to max_completion_length
+max_completion_length: 512  # The eval generates at most 512 tokens, so more would never help
 
 # Model behavior
 temperature: 1.0  # training temperature (more exploration; at 0.6 family_relationships rollouts almost never used tags)
@@ -95,7 +101,7 @@ checkpoint_path: null      # Path to trained model/checkpoint for eval-only mode
 # Fixed evaluation settings
 eval_num_samples: 200
 eval_num_examples_to_print: 5
-fixed_eval_steps: 20  # Run fixed eval every N steps (a multiple of logging_steps: evals run on logging steps)
+fixed_eval_steps: 10  # Run fixed eval every N steps (a multiple of logging_steps: evals run on logging steps)
 
 # Variance logging (helps diagnose exploration)
 log_reward_variance: true

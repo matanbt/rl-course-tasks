@@ -91,8 +91,9 @@ CONCISE_LIMIT = CONCISE.replace(
     "2. Keep the reasoning brief (at most about 120 words): only the steps needed to get the answer, then check it once.",
 )
 
-# Format rules, "follow the question", and a length budget for the thinking, nothing more. The budget (about 250 words,
-# roughly 330-350 tokens) keeps replies under the overlong-penalty start (384 tokens) and the eval's 512-token cap.
+# Format rules, "follow the question", and a length budget for the thinking, nothing more. The budget (about 300 words,
+# roughly 400 tokens) leaves room for full reasoning (the best run's base_conversion answers took ~235 words at its
+# peak, and got worse as they shrank) while staying under the eval's 512-token cap.
 FOCUSED = """Reply in exactly this format and nothing else:
 <think>
 reasoning
@@ -102,7 +103,7 @@ reasoning
 Rules:
 1. Exactly one <think> block, then exactly one <answer> block. Never repeat a tag. Write nothing after </answer>.
 2. Follow the question exactly: apply every condition it states and give the answer in the exact form it asks for.
-3. Use the <think> block as much as you need, but keep the whole reply under about 250 words so it is not cut off.
+3. Use the <think> block as much as you need, but keep the whole reply under about 300 words so it is not cut off.
 4. Inside <answer>, write only the final answer. Even when the question says to reply with just a word or number, put it inside <answer> </answer>.
 """
 
