@@ -16,6 +16,11 @@ from transformers import TrainerCallback
 
 from .formatting import ISSUES, format_issues
 
+try:
+    import wandb
+except ImportError:
+    wandb = None
+
 TEMPLATE = Path(__file__).with_name("report_template.html")
 DATA_SLOT = '<script id="report-data" type="application/json"></script>'
 TRAIN_SAMPLES_PER_TASK = 200
@@ -247,7 +252,8 @@ def build_report(output_dir: str, train_data, eval_data, system_prompt: str, run
 
 
 class ReportCallback(TrainerCallback):
-    """Rebuild <output_dir>/report.html after each fixed eval, at every checkpoint, and when training ends.
+    """Rebuild <output_dir>/report.html after each fixed eval, at every checkpoint, and when training ends,
+    and log each build to the wandb run (if any) as an HTML panel.
 
     Add it after FixedEvalCallback so that eval's results are already on disk when the report is built.
     """
@@ -265,6 +271,9 @@ class ReportCallback(TrainerCallback):
             info = {**self.args[3], "global_step": state.global_step}
             path = build_report(args.output_dir, *self.args[:3], info)
             print(f"📄 Run report written to {path}")
+            if wandb is not None and wandb.run is not None:
+                # No step: other loggers use their own x-axis, so attach to whatever step is pending
+                wandb.log({"report": wandb.Html(path, inject=False)}, commit=False)
         except Exception as e:  # a report bug must never kill a training run
             print(f"Warning: failed to build run report: {e}")
 
