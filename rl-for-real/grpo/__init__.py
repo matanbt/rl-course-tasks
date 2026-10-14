@@ -8,6 +8,7 @@ from .config import DatasetConfig, DatasetConfigItem
 from .dataset import ReasoningGymDataset, prepare_datasets
 from .trainer import CustomGRPOTrainer
 from .eval_callback import FixedEvalCallback
+from .report import ReportCallback, build_report, run_info
 from .utils import build_wandb_config, log_trainable_params
 
 __all__ = [
@@ -17,6 +18,9 @@ __all__ = [
     "prepare_datasets",
     "CustomGRPOTrainer",
     "FixedEvalCallback",
+    "ReportCallback",
+    "build_report",
+    "run_info",
     "build_wandb_config",
     "log_trainable_params",
 ]

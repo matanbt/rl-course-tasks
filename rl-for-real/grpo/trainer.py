@@ -1,5 +1,7 @@
 """Custom GRPO Trainer with reasoning-gym reward functions."""
 
+import json
+import os
 import re
 
 import torch
@@ -120,8 +122,41 @@ class CustomGRPOTrainer(GRPOTrainer):
         
         if self.log_reward_variance:
             self._log_variance(rewards, answers, completions)
-        
+
+        self._save_rollouts(completions, answers, rewards, kwargs["item"], kwargs.get("completion_ids"))
         return rewards
+
+    def _save_rollouts(self, completions: list[str], answers: list[str], rewards: list[float], items: list[dict],
+                       completion_ids: list[list[int]] | None = None):
+        """Append every rollout to <output_dir>/rollouts/rollouts_rank<N>.jsonl (written as training goes)."""
+        rollout_dir = os.path.join(self.args.output_dir, "rollouts")
+        os.makedirs(rollout_dir, exist_ok=True)
+        path = os.path.join(rollout_dir, f"rollouts_rank{self.accelerator.process_index}.jsonl")
+        mode = "train" if self.model.training else "eval"
+        format_rewards = self._format_reward(completions)
+        # Several reward calls can share a global step (gradient accumulation), so group ids carry a call counter
+        self._rollout_calls = getattr(self, "_rollout_calls", 0) + 1
+        # Same truncation test TRL uses: a completion that doesn't end in EOS/pad hit max_completion_length
+        stop_ids = {self.eos_token_id, self.pad_token_id} if hasattr(self, "eos_token_id") else set()
+        ids_list = completion_ids or [None] * len(completions)
+        with open(path, "a", encoding="utf-8") as f:
+            for i, (completion, answer, reward, fmt, item, ids) in enumerate(
+                zip(completions, answers, rewards, format_rewards, items, ids_list)
+            ):
+                f.write(json.dumps({
+                    "step": self.state.global_step,
+                    "mode": mode,
+                    "group": f"{self._rollout_calls}.{i // self.args.num_generations}",
+                    "num_tokens": len(ids) if ids is not None else None,
+                    "truncated": (not ids or ids[-1] not in stop_ids) if ids is not None else None,
+                    "task": item.get("metadata", {}).get("source_dataset"),
+                    "question": item["question"],
+                    "ground_truth": item["answer"],
+                    "completion": completion,
+                    "extracted": answer,
+                    "accuracy_reward": reward,
+                    "format_reward": fmt,
+                }, ensure_ascii=False, default=str) + "\n")
     
     def _log_variance(self, rewards: list[float], answers: list[str], completions: list[str]):
         """Log the percentage of prompts with reward variance across rollouts."""
