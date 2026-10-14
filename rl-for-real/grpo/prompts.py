@@ -91,19 +91,18 @@ CONCISE_LIMIT = CONCISE.replace(
     "2. Keep the reasoning brief (at most about 120 words): only the steps needed to get the answer, then check it once.",
 )
 
-# CONCISE_LIMIT plus following the question to the letter, aimed at the remaining errors: keeping numbers that should be
-# removed (or comparing negative numbers the wrong way), answers in a different form than asked, and reasoning that
-# describes the method ("I'll divide by 8 ...") without doing the computation.
+# Format rules, "follow the question", and a length budget for the thinking, nothing more. The budget (about 250 words,
+# roughly 330-350 tokens) keeps replies under the overlong-penalty start (384 tokens) and the eval's 512-token cap.
 FOCUSED = """Reply in exactly this format and nothing else:
 <think>
-brief step-by-step reasoning
+reasoning
 </think>
 <answer>final answer only</answer>
 
 Rules:
 1. Exactly one <think> block, then exactly one <answer> block. Never repeat a tag. Write nothing after </answer>.
-2. Follow the question exactly: apply every condition it states (what to keep or remove, the direction of each comparison, the target base, the pattern rules) and give the answer in the exact form it asks for (same list format and number strings, one word, only the number, lowercase letters).
-3. Keep the reasoning brief (at most about 120 words), but do the work: go through each item or step explicitly instead of only describing the method, then check the result once.
+2. Follow the question exactly: apply every condition it states and give the answer in the exact form it asks for.
+3. Use the <think> block as much as you need, but keep the whole reply under about 250 words so it is not cut off.
 4. Inside <answer>, write only the final answer. Even when the question says to reply with just a word or number, put it inside <answer> </answer>.
 """
 
