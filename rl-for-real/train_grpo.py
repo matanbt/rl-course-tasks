@@ -142,9 +142,7 @@ def _init_wandb(reasoning_gym_args, training_args, model_args, logger, mode="tra
             full_config = grpo.build_wandb_config(reasoning_gym_args, training_args, model_args)
             full_config["mode"] = mode
             
-            name = training_args.run_name
-            if mode == "eval_only":
-                name = f"{name}_eval" if name else "eval"
+            name = grpo.wandb_run_name(reasoning_gym_args, training_args, model_args, mode)
             
             wandb.init(
                 entity=os.environ.get("WANDB_ENTITY", "rl-4-real"),

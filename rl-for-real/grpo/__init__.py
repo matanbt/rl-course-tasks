@@ -9,7 +9,7 @@ from .dataset import ReasoningGymDataset, prepare_datasets
 from .trainer import CustomGRPOTrainer
 from .eval_callback import FixedEvalCallback
 from .report import ReportCallback, build_report, run_info
-from .utils import build_wandb_config, log_trainable_params
+from .utils import build_wandb_config, log_trainable_params, wandb_run_name
 
 __all__ = [
     "DatasetConfig",
@@ -23,4 +23,5 @@ __all__ = [
     "run_info",
     "build_wandb_config",
     "log_trainable_params",
+    "wandb_run_name",
 ]

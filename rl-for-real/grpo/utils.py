@@ -1,5 +1,6 @@
 """Utility functions for GRPO training."""
 
+import os
 from dataclasses import asdict
 
 
@@ -48,6 +49,28 @@ def build_wandb_config(reasoning_gym_args, training_args, model_args) -> dict:
         config["model"] = str(model_args)
     
     return config
+
+
+def wandb_run_name(reasoning_gym_args, training_args, model_args, mode: str = "training") -> str:
+    """run_name plus the settings that most often differ between runs, for the wandb run name.
+
+    E.g. "grpo [DeepSeekZero lora64 lr=2e-05 gen=8 T=1 4gpu 500st]". The output directory keeps the plain run_name.
+    """
+    base = training_args.run_name or "grpo"
+    if mode == "eval_only":
+        model = os.path.basename(str(reasoning_gym_args.checkpoint_path or model_args.model_name_or_path).rstrip("/"))
+        return f"{base}_eval [{reasoning_gym_args.developer_prompt} {model} T={reasoning_gym_args.eval_temperature:g}]"
+    adapter = f"lora{model_args.lora_r}" if model_args.use_peft else "fullft"
+    tags = [
+        reasoning_gym_args.developer_prompt,
+        adapter,
+        f"lr={training_args.learning_rate:g}",
+        f"gen={training_args.num_generations}",
+        f"T={training_args.temperature:g}",
+        f"{training_args.world_size}gpu",
+        f"{training_args.max_steps}st",
+    ]
+    return f"{base} [{' '.join(tags)}]"
 
 
 def log_trainable_params(model):
