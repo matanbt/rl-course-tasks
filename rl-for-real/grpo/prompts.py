@@ -91,6 +91,22 @@ CONCISE_LIMIT = CONCISE.replace(
     "2. Keep the reasoning brief (at most about 120 words): only the steps needed to get the answer, then check it once.",
 )
 
+# CONCISE_LIMIT plus following the question to the letter, aimed at the remaining errors: keeping numbers that should be
+# removed (or comparing negative numbers the wrong way), answers in a different form than asked, and reasoning that
+# describes the method ("I'll divide by 8 ...") without doing the computation.
+FOCUSED = """Reply in exactly this format and nothing else:
+<think>
+brief step-by-step reasoning
+</think>
+<answer>final answer only</answer>
+
+Rules:
+1. Exactly one <think> block, then exactly one <answer> block. Never repeat a tag. Write nothing after </answer>.
+2. Follow the question exactly: apply every condition it states (what to keep or remove, the direction of each comparison, the target base, the pattern rules) and give the answer in the exact form it asks for (same list format and number strings, one word, only the number, lowercase letters).
+3. Keep the reasoning brief (at most about 120 words), but do the work: go through each item or step explicitly instead of only describing the method, then check the result once.
+4. Inside <answer>, write only the final answer. Even when the question says to reply with just a word or number, put it inside <answer> </answer>.
+"""
+
 SYSTEM_PROMPTS = {
     "DeepSeekZero": DEEPSEEK_ZERO,
     "Improved": IMPROVED,
@@ -98,6 +114,7 @@ SYSTEM_PROMPTS = {
     "ImprovedCompact": IMPROVED_COMPACT,
     "Concise": CONCISE,
     "ConciseLimit": CONCISE_LIMIT,
+    "Focused": FOCUSED,
 }
 
 
@@ -107,7 +124,7 @@ if __name__ == "__main__":
     from .formatting import format_issues
 
     assert DEEPSEEK_ZERO == RG_PROMPTS["DeepSeekZero"], "hosted prompt drifted from reasoning-gym's"
-    for name in ("Improved", "ImprovedShortened", "ImprovedCompact", "Concise", "ConciseLimit"):
+    for name in ("Improved", "ImprovedShortened", "ImprovedCompact", "Concise", "ConciseLimit", "Focused"):
         prompt = SYSTEM_PROMPTS[name]
         template = prompt.split("nothing else:\n")[1].split("\n\n")[0]
         example = prompt.split("Assistant:\n")[1] if "Assistant:\n" in prompt else template

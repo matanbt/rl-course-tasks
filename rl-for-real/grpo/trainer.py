@@ -11,6 +11,7 @@ from reasoning_gym.utils import extract_answer
 
 from .dataset import FORMAT_HINT, ReasoningGymDataset
 from .formatting import format_issues
+from .partial_credit import partial_credit
 
 # Try to import wandb for logging (optional)
 try:
@@ -43,6 +44,8 @@ class CustomGRPOTrainer(GRPOTrainer):
         binary_accuracy_reward: bool = False,
         strict_format_reward: bool = False,
         overlong_penalty_start: int = 0,
+        partial_credit_tasks: list[str] | None = None,
+        partial_credit_max: float = 0.5,
     ):
         super().__init__(
             model=model,
@@ -61,6 +64,8 @@ class CustomGRPOTrainer(GRPOTrainer):
         self.binary_accuracy_reward = binary_accuracy_reward
         self.strict_format_reward = strict_format_reward
         self.overlong_penalty_start = overlong_penalty_start
+        self.partial_credit_tasks = set(partial_credit_tasks or [])
+        self.partial_credit_max = partial_credit_max
         self._step_count = 0
     
     def log(self, logs: dict, start_time: float = None) -> None:
@@ -130,6 +135,12 @@ class CustomGRPOTrainer(GRPOTrainer):
             # The eval only counts score >= 1 as correct. Partial credit (e.g. the true answer appearing inside a
             # longer answer) would reward the model for putting its working in the answer tags.
             rewards = [1.0 if r >= 1.0 else 0.0 for r in rewards]
+        if self.partial_credit_tasks:
+            # Non-exact answers to these tasks earn up to partial_credit_max for being close (grpo/partial_credit.py)
+            for i, (answer, item) in enumerate(zip(answers, kwargs["item"])):
+                task = item.get("metadata", {}).get("source_dataset")
+                if rewards[i] < 1.0 and task in self.partial_credit_tasks:
+                    rewards[i] = max(rewards[i], partial_credit(task, answer, item["answer"], self.partial_credit_max))
 
         if self.log_reward_variance:
             self._log_variance(rewards, answers, completions)
