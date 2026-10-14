@@ -1,0 +1,10 @@
+# RL for Real - Dependencies with vLLM generation
+# Install with: pip install -r requirements-vllm.txt
+#
+# vLLM 0.11.0 is the newest version TRL 0.27 supports. It pins torch 2.8 (CUDA 12.8 build),
+# so install this in a separate environment from requirements.txt, e.g.:
+#   conda create -n rl-for-real-vllm python=3.10 -y && conda activate rl-for-real-vllm
+#   pip install -r requirements-vllm.txt
+
+vllm==0.11.0
+-r requirements.txt

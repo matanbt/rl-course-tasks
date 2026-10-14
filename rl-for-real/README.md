@@ -50,6 +50,23 @@ pip install -r requirements.txt
 wandb login
 ```
 
+### 5. Multi-GPU and vLLM (Optional)
+
+`config/multi_tasks.yaml` is set up for 4 GPUs (4 completions per GPU, 16 per step):
+```bash
+CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --num_processes 4 train_grpo.py --config config/multi_tasks.yaml
+```
+
+To generate the training rollouts with [vLLM](https://github.com/vllm-project/vllm), create a separate environment (vLLM pins its own PyTorch version):
+```bash
+conda create -n rl-for-real-vllm python=3.10 -y
+conda activate rl-for-real-vllm
+pip install -r requirements-vllm.txt
+CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --num_processes 4 train_grpo.py --config config/multi_tasks_vllm.yaml
+```
+
+With a different number of GPUs, keep `per_device_train_batch_size × num_processes × gradient_accumulation_steps` divisible by `num_generations`. This product is the number of completions per step, so changing it changes the training dynamics.
+
 ## Exercise
 
 ### Warmup
