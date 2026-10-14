@@ -277,6 +277,7 @@ def _run_training(reasoning_gym_args, training_args, model_args, logger):
         batch_counts_as_step=reasoning_gym_args.batch_counts_as_step,
         binary_accuracy_reward=reasoning_gym_args.binary_accuracy_reward,
         strict_format_reward=reasoning_gym_args.strict_format_reward,
+        overlong_penalty_start=reasoning_gym_args.overlong_penalty_start,
     )
     
     # Log parameter info

@@ -42,6 +42,7 @@ class CustomGRPOTrainer(GRPOTrainer):
         batch_counts_as_step: bool = False,
         binary_accuracy_reward: bool = False,
         strict_format_reward: bool = False,
+        overlong_penalty_start: int = 0,
     ):
         super().__init__(
             model=model,
@@ -59,6 +60,7 @@ class CustomGRPOTrainer(GRPOTrainer):
         self.batch_counts_as_step = batch_counts_as_step
         self.binary_accuracy_reward = binary_accuracy_reward
         self.strict_format_reward = strict_format_reward
+        self.overlong_penalty_start = overlong_penalty_start
         self._step_count = 0
     
     def log(self, logs: dict, start_time: float = None) -> None:
@@ -143,7 +145,7 @@ class CustomGRPOTrainer(GRPOTrainer):
         os.makedirs(rollout_dir, exist_ok=True)
         path = os.path.join(rollout_dir, f"rollouts_rank{self.accelerator.process_index}.jsonl")
         mode = "train" if self.model.training else "eval"
-        format_rewards = self._format_reward(completions)
+        format_rewards = self._format_reward(completions, completion_ids=completion_ids)
         # Several reward calls can share a global step (gradient accumulation), so group ids carry a call counter
         self._rollout_calls = getattr(self, "_rollout_calls", 0) + 1
         # Same truncation test TRL uses: a completion that doesn't end in EOS/pad hit max_completion_length
@@ -250,4 +252,12 @@ class CustomGRPOTrainer(GRPOTrainer):
         # Strict: the tags earn up to 0.5, and the other 0.5 needs a clean layout (one <think>, then one single-line
         # <answer>, nothing else). The eval scores only the last <answer>, so extra or chatty answers lose points.
         # Keeping the per-tag part leaves a gradient from untagged answers towards tagged ones.
-        return [0.5 * count_tags(c) + (0.5 if not format_issues(c) else 0.0) for c in completions]
+        rewards = [0.5 * count_tags(c) + (0.5 if not format_issues(c) else 0.0) for c in completions]
+        completion_ids = kwargs.get("completion_ids")
+        if self.overlong_penalty_start and completion_ids is not None:
+            # Soft overlong penalty (as in DAPO): past overlong_penalty_start tokens the reward drops linearly, by 1 at
+            # max_completion_length, so long reasoning loses reward before it gets cut off with no answer at all
+            start, end = self.overlong_penalty_start, self.args.max_completion_length
+            rewards = [r - min(1.0, max(0, len(ids) - start) / max(1, end - start))
+                       for r, ids in zip(rewards, completion_ids)]
+        return rewards

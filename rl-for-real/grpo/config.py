@@ -49,6 +49,7 @@ class DatasetConfig:
     # Reward shaping (see CustomGRPOTrainer)
     binary_accuracy_reward: bool = field(default=False)  # If True, accuracy reward is 1 only for an exact answer (score >= 1, the eval's test), else 0
     strict_format_reward: bool = field(default=False)  # If True, half the format reward requires the clean layout (see grpo/formatting.py)
+    overlong_penalty_start: int = field(default=0)  # If > 0 (with strict_format_reward), the format reward drops linearly by up to 1 from this many completion tokens to max_completion_length
     
     # Training-only prompt hint (eval prompts are never changed, see grpo/dataset.py)
     train_format_hint_tasks: Optional[list[str]] = field(default=None)  # Tasks whose training questions may get FORMAT_HINT

@@ -30,7 +30,7 @@ SETTING_KEYS = [
     "developer_prompt", "dataset_size", "datasets", "eval_datasets", "eval_num_samples", "fixed_eval_steps",
     "max_steps", "per_device_train_batch_size", "gradient_accumulation_steps", "num_generations",
     "learning_rate", "lr_scheduler_type", "warmup_steps", "warmup_ratio", "beta", "loss_type",
-    "reward_weights", "binary_accuracy_reward", "strict_format_reward",
+    "reward_weights", "binary_accuracy_reward", "strict_format_reward", "overlong_penalty_start",
     "train_format_hint_tasks", "train_format_hint_ratio",
     "max_prompt_length", "max_completion_length", "mask_truncated_completions",
     "temperature", "eval_temperature", "use_peft", "lora_r", "lora_alpha", "lora_dropout", "bf16", "seed",
