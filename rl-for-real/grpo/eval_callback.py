@@ -6,6 +6,7 @@ import os
 import re
 
 import torch
+import torch.distributed as dist
 from transformers import TrainerCallback
 
 from reasoning_gym.utils import extract_answer
@@ -20,11 +21,22 @@ except ImportError:
     WANDB_AVAILABLE = False
 
 
+def _dist_rank_and_world() -> tuple[int, int]:
+    if dist.is_available() and dist.is_initialized():
+        return dist.get_rank(), dist.get_world_size()
+    return 0, 1
+
+
+def _is_main_process() -> bool:
+    return _dist_rank_and_world()[0] == 0
+
+
 class FixedEvalCallback(TrainerCallback):
     """
     Callback for reliable evaluation on a fixed set of samples.
     
     - Evaluates the same samples every time for comparable metrics
+    - Under multi-GPU (accelerate/DDP), shards the samples across ranks and gathers the results
     - Logs to wandb
     - Saves results to JSON
     - Prints example outputs
@@ -101,9 +113,10 @@ class FixedEvalCallback(TrainerCallback):
     
     def _run_eval(self, model, step: int):
         """Run evaluation and log/save results."""
-        print(f"\n{'='*60}")
-        print(f"Running fixed evaluation at step {step}")
-        print(f"{'='*60}")
+        if _is_main_process():
+            print(f"\n{'='*60}")
+            print(f"Running fixed evaluation at step {step}")
+            print(f"{'='*60}")
 
         results = self._evaluate(model, step)
         self._log_to_wandb(results, step)
@@ -117,14 +130,16 @@ class FixedEvalCallback(TrainerCallback):
         device = next(model.parameters()).device
         pad_token_id = self.tokenizer.pad_token_id or self.tokenizer.eos_token_id
         
-        num_correct = 0
-        format_scores = []
         examples = []
-        task_stats = {}  # task_name -> {"correct": int, "total": int, "format_scores": list}
+        
+        # Each rank evaluates its own shard of the fixed samples (all of them when not distributed)
+        rank, world_size = _dist_rank_and_world()
+        indexed_samples = list(enumerate(self.fixed_samples))[rank::world_size]
         
         # Process samples in batches
-        for batch_start in range(0, len(self.fixed_samples), self.eval_batch_size):
-            batch_samples = self.fixed_samples[batch_start:batch_start + self.eval_batch_size]
+        for batch_start in range(0, len(indexed_samples), self.eval_batch_size):
+            batch_indexed = indexed_samples[batch_start:batch_start + self.eval_batch_size]
+            batch_samples = [s for _, s in batch_indexed]
             batch_prompts = [s["prompt"] for s in batch_samples]
             
             # Tokenize batch with left-padding for generation
@@ -152,29 +167,17 @@ class FixedEvalCallback(TrainerCallback):
             
             # Process each sample in the batch
             input_length = inputs["input_ids"].shape[1]
-            for i, sample in enumerate(batch_samples):
-                task_name = sample["task"]
-                if task_name not in task_stats:
-                    task_stats[task_name] = {"correct": 0, "total": 0, "format_scores": []}
-                
+            for i, (sample_idx, sample) in enumerate(batch_indexed):
                 generated_ids = outputs[i][input_length:]
                 generated_text = self.tokenizer.decode(generated_ids, skip_special_tokens=True)
                 extracted = extract_answer(generated_text)
 
                 score = self.procedural_dataset.score_answer(extracted, sample["item"])
                 is_correct = score >= 1.0
-
-                if is_correct:
-                    num_correct += 1
-                    task_stats[task_name]["correct"] += 1
-                
-                task_stats[task_name]["total"] += 1
-                
                 format_score = self._score_format(generated_text)
-                format_scores.append(format_score)
-                task_stats[task_name]["format_scores"].append(format_score)
                 
                 examples.append({
+                    "index": sample_idx,
                     "question": sample["question"],
                     "ground_truth": sample["answer"],
                     "generated": generated_text,
@@ -182,11 +185,28 @@ class FixedEvalCallback(TrainerCallback):
                     "correct": is_correct,
                     "accuracy_score": score,
                     "format_score": format_score,
-                    "task": task_name,
+                    "task": sample["task"],
                 })
         
         torch.cuda.empty_cache()
         model.train()
+        
+        # Collect all shards so every rank holds the full, ordered result
+        if world_size > 1:
+            gathered = [None] * world_size
+            dist.all_gather_object(gathered, examples)
+            examples = [ex for shard in gathered for ex in shard]
+        examples.sort(key=lambda ex: ex["index"])
+        assert len(examples) == len(self.fixed_samples)
+        
+        num_correct = sum(ex["correct"] for ex in examples)
+        format_scores = [ex["format_score"] for ex in examples]
+        task_stats = {}  # task_name -> {"correct": int, "total": int, "format_scores": list}
+        for ex in examples:
+            stats = task_stats.setdefault(ex["task"], {"correct": 0, "total": 0, "format_scores": []})
+            stats["correct"] += int(ex["correct"])
+            stats["total"] += 1
+            stats["format_scores"].append(ex["format_score"])
         
         accuracy = (num_correct / len(self.fixed_samples)) * 100 if self.fixed_samples else 0
         avg_format = (sum(format_scores) / len(format_scores)) * 100 if format_scores else 0
@@ -249,7 +269,7 @@ class FixedEvalCallback(TrainerCallback):
     
     def _save_results(self, results: dict, step: int):
         """Save evaluation results to JSON file."""
-        if self.output_dir is None:
+        if self.output_dir is None or not _is_main_process():
             return
         
         eval_dir = os.path.join(self.output_dir, "eval_results")
@@ -275,6 +295,8 @@ class FixedEvalCallback(TrainerCallback):
     
     def _print_results(self, results: dict, step: int):
         """Print evaluation results summary and examples."""
+        if not _is_main_process():
+            return
         print(f"\n{'='*70}")
         print(f"📊 Evaluation Results (Step {step})")
         print(f"{'='*70}")

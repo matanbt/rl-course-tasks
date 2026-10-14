@@ -136,7 +136,8 @@ def _init_wandb(reasoning_gym_args, training_args, model_args, logger, mode="tra
         # Disable HuggingFace's automatic wandb integration - we'll log manually
         training_args.report_to = []
         
-        if wandb.run is None:
+        # Under multi-GPU launch, only the main process owns the wandb run
+        if wandb.run is None and training_args.process_index == 0:
             full_config = grpo.build_wandb_config(reasoning_gym_args, training_args, model_args)
             full_config["mode"] = mode
             

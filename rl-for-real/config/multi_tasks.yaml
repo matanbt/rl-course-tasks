@@ -45,12 +45,15 @@ batch_counts_as_step: false  # Note: this is used to compare runs with different
 num_train_epochs: 1  # Note: in our setting, this is practically irrelevant, since max_steps does not allow reaching a second epoch anyway.
 
 # Batch sizes
-per_device_eval_batch_size: 16
-per_device_train_batch_size: 8
-gradient_accumulation_steps: 2
+# Tuned for 4 GPUs via `accelerate launch --num_processes 4`:
+# 4 per device x 4 processes x 1 accumulation = 16 completions per step (same as the original 8 x 1 GPU x 2).
+# On a single GPU, use per_device_train_batch_size: 8 and gradient_accumulation_steps: 2 instead.
+per_device_eval_batch_size: 64
+per_device_train_batch_size: 4
+gradient_accumulation_steps: 1
 
 # Learning rate
-learning_rate: 3e-6
+learning_rate: 2e-6
 warmup_ratio: 0.1
 lr_scheduler_type: constant_with_warmup
 lr_scheduler_kwargs:
