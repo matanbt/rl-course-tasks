@@ -65,10 +65,16 @@ Count "r" word by word: "bright" has 1, "red" has 1, "barrel" has 2 (b-a-r-r-e-l
 <answer>4</answer>
 """
 
+# IMPROVED_SHORTENED without the worked example (234 tokens). The fixed eval truncates prompts at 512 tokens
+# (grpo/eval_callback.py), which cuts the end of the question and the assistant turn: with IMPROVED, 124 of the 200
+# eval prompts exceed it, with IMPROVED_SHORTENED all 39 string_insertion ones do. With this one the longest is 453.
+IMPROVED_COMPACT = IMPROVED_SHORTENED.split("\nExample:\n")[0]
+
 SYSTEM_PROMPTS = {
     "DeepSeekZero": DEEPSEEK_ZERO,
     "Improved": IMPROVED,
     "ImprovedShortened": IMPROVED_SHORTENED,
+    "ImprovedCompact": IMPROVED_COMPACT,
 }
 
 
@@ -78,9 +84,9 @@ if __name__ == "__main__":
     from .formatting import format_issues
 
     assert DEEPSEEK_ZERO == RG_PROMPTS["DeepSeekZero"], "hosted prompt drifted from reasoning-gym's"
-    for name in ("Improved", "ImprovedShortened"):
+    for name in ("Improved", "ImprovedShortened", "ImprovedCompact"):
         prompt = SYSTEM_PROMPTS[name]
         template = prompt.split("nothing else:\n")[1].split("\n\n")[0]
-        example = prompt.split("Assistant:\n")[1]
+        example = prompt.split("Assistant:\n")[1] if "Assistant:\n" in prompt else template
         assert not format_issues(template) and not format_issues(example), f"{name} shows a reply that breaks the format"
     print("prompts OK")
