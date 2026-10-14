@@ -42,7 +42,7 @@ model_name_or_path: Qwen/Qwen2.5-3B-Instruct
 auto_resume: false  # If true, auto-resume from last checkpoint in output_dir
 
 # Training steps
-max_steps: 200
+max_steps: 500
 batch_counts_as_step: false  # Note: this is used to compare runs with different batch-sizes - presenting results vs. train data (instead of vs. model updates).
 num_train_epochs: 1  # Note: in our setting, this is practically irrelevant, since max_steps does not allow reaching a second epoch anyway.
 
@@ -54,7 +54,7 @@ per_device_train_batch_size: 4
 gradient_accumulation_steps: 2
 
 # Learning rate
-learning_rate: 2e-6
+learning_rate: 2e-5  # LoRA needs a much higher learning rate than full fine-tuning (2e-6)
 warmup_ratio: 0.1
 lr_scheduler_type: constant_with_warmup
 lr_scheduler_kwargs:
@@ -74,11 +74,13 @@ temperature: 1.0  # training temperature (more exploration; at 0.6 family_relati
 eval_temperature: 0.0  # eval temperature (0 = greedy/deterministic, so evals differ only because the model did)
 
 # LORA
-use_peft: false
-lora_r: 256
-lora_alpha: 256
-lora_dropout: 0.05
-#lora_target_modules: all-linear  # optional: adapt every linear layer (unset = PEFT default, only q_proj/v_proj for Qwen2)
+# The LoRA adapters train in fp32 (PEFT's default). Full fine-tuning updates the bf16 weights directly, and at lr 2e-6
+# most of those updates are below bf16 resolution and round away. LoRA learned faster in our runs.
+use_peft: true
+lora_r: 64
+lora_alpha: 64
+lora_dropout: 0.0  # dropout would add noise between the policy that samples the rollouts and the one being trained
+lora_target_modules: all-linear  # adapt every linear layer (unset = PEFT default, only q_proj/v_proj for Qwen2)
 
 # =============================================================================
 # Evaluation & Checkpointing
