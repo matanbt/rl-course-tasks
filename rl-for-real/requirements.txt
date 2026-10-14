@@ -17,7 +17,7 @@ peft>=0.10.0  # For LoRA/PEFT fine-tuning
 reasoning-gym>=0.1.19
 
 # Logging & monitoring
-trackio>=0.2.0
+wandb>=0.16.0
 
 # Utilities
 tqdm>=4.65.0

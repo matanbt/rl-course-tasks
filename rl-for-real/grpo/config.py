@@ -58,7 +58,7 @@ class DatasetConfig:
     
     # Step counting mode
     # If True: interpret max_steps/fixed_eval_steps as batch counts (divided by gradient_accumulation_steps)
-    #          and use batch as trackio x-axis for fair comparison across different accumulation settings
+    #          and use batch as wandb x-axis for fair comparison across different accumulation settings
     # If False: normal step-based counting
     batch_counts_as_step: bool = field(default=False)
 

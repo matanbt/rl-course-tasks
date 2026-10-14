@@ -50,7 +50,7 @@ auto_resume: false  # If true, auto-resume from last checkpoint in output_dir
 
 # Training steps
 max_steps: 200
-batch_counts_as_step: false  # If true: max_steps/eval_steps count batches, trackio x-axis is batch count
+batch_counts_as_step: false  # If true: max_steps/eval_steps count batches, wandb x-axis is batch count
 num_train_epochs: 1
 
 # Batch sizes
@@ -122,4 +122,4 @@ seed: 42
 # Logging
 # =============================================================================
 
-report_to: trackio  # or "none" to disable
+report_to: wandb  # or "none" to disable

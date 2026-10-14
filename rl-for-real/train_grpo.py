@@ -12,7 +12,7 @@ Features:
     - Fixed evaluation on consistent samples for reliable progress tracking
     - Reward variance logging to diagnose exploration
     - Baseline evaluation at step 0
-    - Automatic trackio integration
+    - Automatic wandb integration
     - JSON export of evaluation results
 """
 
@@ -28,12 +28,12 @@ from trl import GRPOConfig, ModelConfig, TrlParser
 
 import grpo
 
-# Try to import trackio for logging (optional)
+# Try to import wandb for logging (optional)
 try:
-    import trackio
-    TRACKIO_AVAILABLE = True
+    import wandb
+    WANDB_AVAILABLE = True
 except ImportError:
-    TRACKIO_AVAILABLE = False
+    WANDB_AVAILABLE = False
 
 # Try to import peft for LoRA (optional)
 try:
@@ -127,33 +127,33 @@ def _find_checkpoint(reasoning_gym_args, training_args, logger):
     return None
 
 
-def _init_trackio(reasoning_gym_args, training_args, model_args, logger, mode="training"):
-    """Initialize trackio if configured."""
-    if not TRACKIO_AVAILABLE or "trackio" not in (training_args.report_to or []):
+def _init_wandb(reasoning_gym_args, training_args, model_args, logger, mode="training"):
+    """Initialize wandb if configured."""
+    if not WANDB_AVAILABLE or "wandb" not in (training_args.report_to or []):
         return
     
     try:
-        # Disable HuggingFace's automatic trackio integration - we'll log manually
+        # Disable HuggingFace's automatic wandb integration - we'll log manually
         training_args.report_to = []
         
-        if trackio.context_vars.current_run.get() is None:
-            full_config = grpo.build_trackio_config(reasoning_gym_args, training_args, model_args)
+        if wandb.run is None:
+            full_config = grpo.build_wandb_config(reasoning_gym_args, training_args, model_args)
             full_config["mode"] = mode
             
             name = training_args.run_name
             if mode == "eval_only":
                 name = f"{name}_eval" if name else "eval"
             
-            trackio.init(
-                project=os.environ.get("TRACKIO_PROJECT", "rl-for-real"),
+            wandb.init(
+                project=os.environ.get("WANDB_PROJECT", "rl-for-real"),
                 name=name,
                 config=full_config,
             )
             
-            logger.info(f"✓ Initialized trackio manually (disabled HuggingFace's automatic logging)")
-            logger.info(f"  Using step parameter in trackio.log() for explicit x-axis control")
+            logger.info(f"✓ Initialized wandb manually (disabled HuggingFace's automatic logging)")
+            logger.info(f"  Using step parameter in wandb.log() for explicit x-axis control")
     except Exception as e:
-        logger.warning(f"Failed to initialize trackio: {e}")
+        logger.warning(f"Failed to initialize wandb: {e}")
 
 
 def _save_model(trainer, tokenizer, training_args, logger):
@@ -225,8 +225,8 @@ def _run_eval_only(reasoning_gym_args, training_args, model_args, logger):
         eval_batch_size=training_args.per_device_eval_batch_size,
     )
     
-    # Initialize trackio
-    _init_trackio(reasoning_gym_args, training_args, model_args, logger, mode="eval_only")
+    # Initialize wandb
+    _init_wandb(reasoning_gym_args, training_args, model_args, logger, mode="eval_only")
     
     # Run evaluation
     print("\n" + "=" * 70)
@@ -235,13 +235,13 @@ def _run_eval_only(reasoning_gym_args, training_args, model_args, logger):
     
     results = eval_callback._evaluate(model, step=0)
     eval_callback._print_results(results, step=0)
-    eval_callback._log_to_trackio(results, step=0)
+    eval_callback._log_to_wandb(results, step=0)
     eval_callback._save_results(results, step=0)
     
     # Clean up
     print("\n✓ Evaluation complete!")
-    if TRACKIO_AVAILABLE and trackio.context_vars.current_run.get() is not None:
-        trackio.finish()
+    if WANDB_AVAILABLE and wandb.run is not None:
+        wandb.finish()
     del model
     torch.cuda.empty_cache()
 
@@ -261,8 +261,8 @@ def _run_training(reasoning_gym_args, training_args, model_args, logger):
     train_dataset, eval_dataset = grpo.prepare_datasets(reasoning_gym_args, tokenizer)
     logger.info(f"✓ Train: {len(train_dataset)} samples, Eval: {len(eval_dataset)} samples")
 
-    # Initialize trackio BEFORE creating trainer (disables HuggingFace's automatic reporting)
-    _init_trackio(reasoning_gym_args, training_args, model_args, logger, mode="training")
+    # Initialize wandb BEFORE creating trainer so we can set define_metric before HuggingFace's WandbCallback
+    _init_wandb(reasoning_gym_args, training_args, model_args, logger, mode="training")
 
     # Initialize trainer
     trainer = grpo.CustomGRPOTrainer(
@@ -302,7 +302,7 @@ def _run_training(reasoning_gym_args, training_args, model_args, logger):
     print("="*60)
     baseline_results = eval_callback._evaluate(model, step=0)
     eval_callback._print_results(baseline_results, step=0)
-    eval_callback._log_to_trackio(baseline_results, step=0)
+    eval_callback._log_to_wandb(baseline_results, step=0)
     eval_callback._save_results(baseline_results, step=0)
 
     # Train!

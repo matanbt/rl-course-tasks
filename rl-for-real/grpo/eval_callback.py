@@ -12,12 +12,12 @@ from reasoning_gym.utils import extract_answer
 
 from .dataset import ReasoningGymDataset
 
-# Try to import trackio for logging (optional)
+# Try to import wandb for logging (optional)
 try:
-    import trackio
-    TRACKIO_AVAILABLE = True
+    import wandb
+    WANDB_AVAILABLE = True
 except ImportError:
-    TRACKIO_AVAILABLE = False
+    WANDB_AVAILABLE = False
 
 
 class FixedEvalCallback(TrainerCallback):
@@ -25,7 +25,7 @@ class FixedEvalCallback(TrainerCallback):
     Callback for reliable evaluation on a fixed set of samples.
     
     - Evaluates the same samples every time for comparable metrics
-    - Logs to trackio
+    - Logs to wandb
     - Saves results to JSON
     - Prints example outputs
     """
@@ -106,7 +106,7 @@ class FixedEvalCallback(TrainerCallback):
         print(f"{'='*60}")
 
         results = self._evaluate(model, step)
-        self._log_to_trackio(results, step)
+        self._log_to_wandb(results, step)
         self._save_results(results, step)
         self._print_results(results, step)
         torch.cuda.empty_cache()
@@ -225,9 +225,9 @@ class FixedEvalCallback(TrainerCallback):
             score += 0.25
         return score
     
-    def _log_to_trackio(self, results: dict, step: int):
-        """Log evaluation results to trackio."""
-        if not TRACKIO_AVAILABLE or trackio.context_vars.current_run.get() is None:
+    def _log_to_wandb(self, results: dict, step: int):
+        """Log evaluation results to wandb."""
+        if not WANDB_AVAILABLE or wandb.run is None:
             return
         try:
             # Build log dict with eval metrics
@@ -241,11 +241,11 @@ class FixedEvalCallback(TrainerCallback):
             for task_name, task_results in results.get("per_task", {}).items():
                 log_dict[f"eval/{task_name}/accuracy"] = task_results["accuracy"]
             
-            # Use step parameter to force trackio to use train/global_step as x-axis
-            trackio.log(log_dict, step=step)
-            self.logger.info(f"📊 Logged to trackio: accuracy={results['accuracy']:.1f}% at global_step={step}")
+            # Use step parameter to force wandb to use train/global_step as x-axis
+            wandb.log(log_dict, step=step)
+            self.logger.info(f"📊 Logged to wandb: accuracy={results['accuracy']:.1f}% at global_step={step}")
         except Exception as e:
-            self.logger.warning(f"Failed to log to trackio: {e}")
+            self.logger.warning(f"Failed to log to wandb: {e}")
     
     def _save_results(self, results: dict, step: int):
         """Save evaluation results to JSON file."""

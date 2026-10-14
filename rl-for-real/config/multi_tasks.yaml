@@ -116,4 +116,4 @@ seed: 42
 # Logging
 # =============================================================================
 
-report_to: trackio  # or "none" to disable
+report_to: wandb  # or "none" to disable

@@ -8,7 +8,7 @@ from .config import DatasetConfig, DatasetConfigItem
 from .dataset import ReasoningGymDataset, prepare_datasets
 from .trainer import CustomGRPOTrainer
 from .eval_callback import FixedEvalCallback
-from .utils import build_trackio_config, log_trainable_params
+from .utils import build_wandb_config, log_trainable_params
 
 __all__ = [
     "DatasetConfig",
@@ -17,6 +17,6 @@ __all__ = [
     "prepare_datasets",
     "CustomGRPOTrainer",
     "FixedEvalCallback",
-    "build_trackio_config",
+    "build_wandb_config",
     "log_trainable_params",
 ]

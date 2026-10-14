@@ -44,13 +44,11 @@ python -c "import torch; print(f'PyTorch: {torch.__version__}, CUDA: {torch.vers
 pip install -r requirements.txt
 ```
 
-### 4. Monitoring with Trackio (Optional)
+### 4. Login to Wandb (Optional)
 
-Metrics are logged with [Trackio](https://github.com/gradio-app/trackio) (project name: `$TRACKIO_PROJECT`, default `rl-for-real`).
-Logs are stored locally on the machine that trains. To view them while training on a remote server, either:
-
-- **SSH tunnel**: on the server run `trackio show --project rl-for-real`, then locally `ssh -L 7860:localhost:7860 <server>` and open http://localhost:7860.
-- **Hugging Face Space**: on the server `huggingface-cli login` and `export TRACKIO_SPACE_ID=<hf-user>/rl-for-real-trackio` before training; logs sync to that Space, viewable from anywhere.
+```bash
+wandb login
+```
 
 ## Exercise
 
@@ -62,7 +60,7 @@ python train_grpo.py --config config/syllogism_toy.yaml
 ```
 This will train Llama-3.2-1B-Instruct for several minutes to solve the `syllogism` task.
 
-Observe the training and evaluation curves in Trackio, as well as examples for questions and answers in the stdout logs. What changes in the model behavior?
+Observe the training and evaluation curves at wandb, as well as examples for questions and answers in the stdout logs. What changes in the model behavior?
 
 ### Train Qwen for better reasoning
 
@@ -74,7 +72,7 @@ python train_grpo.py --config config/multi_tasks.yaml
 ```
 to train Qwen2.5-3B-Instruct to solve several reasoning tasks (`number_filtering`, `string_insertion`, `family_relationships`, `maze`) and test on the same tasks as well as the additional task of `base_conversion`.
 
-Using `config/multi_tasks.yaml` as provided should train for ~40min, with meaningful feedback available in Trackio ~20min after training begins.
+Using `config/multi_tasks.yaml` as provided should train for ~40min, with meaningful feedback available on wandb ~20min after training begins.
 
 #### Tasks
 

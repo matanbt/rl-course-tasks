@@ -37,7 +37,7 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
     trl>=0.12.0 \
     peft>=0.10.0 \
     reasoning-gym>=0.1.19 \
-    trackio>=0.2.0 \
+    wandb>=0.16.0 \
     tqdm>=4.65.0 \
     pyyaml>=6.0
 

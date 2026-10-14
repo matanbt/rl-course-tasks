@@ -3,8 +3,8 @@
 from dataclasses import asdict
 
 
-def build_trackio_config(reasoning_gym_args, training_args, model_args) -> dict:
-    """Build a comprehensive config dict for trackio logging."""
+def build_wandb_config(reasoning_gym_args, training_args, model_args) -> dict:
+    """Build a comprehensive config dict for wandb logging."""
     config = {}
     
     # Add reasoning_gym (DatasetConfig) args

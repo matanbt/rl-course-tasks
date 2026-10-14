@@ -9,12 +9,12 @@ from reasoning_gym.utils import extract_answer
 
 from .dataset import ReasoningGymDataset
 
-# Try to import trackio for logging (optional)
+# Try to import wandb for logging (optional)
 try:
-    import trackio
-    TRACKIO_AVAILABLE = True
+    import wandb
+    WANDB_AVAILABLE = True
 except ImportError:
-    TRACKIO_AVAILABLE = False
+    WANDB_AVAILABLE = False
 
 
 class CustomGRPOTrainer(GRPOTrainer):
@@ -53,10 +53,9 @@ class CustomGRPOTrainer(GRPOTrainer):
         self.verbose_variance_logging = verbose_variance_logging
         self.batch_counts_as_step = batch_counts_as_step
         self._step_count = 0
-        self._pending_logs = {}
     
     def log(self, logs: dict, start_time: float = None) -> None:
-        """Override log to manually log to trackio with correct x-axis."""
+        """Override log to manually log to wandb with correct x-axis."""
         # First, let parent class merge _metrics into logs
         # (GRPOTrainer.log merges self._metrics[mode] into logs before calling super().log)
         mode = "train" if self.model.training else "eval"
@@ -65,11 +64,9 @@ class CustomGRPOTrainer(GRPOTrainer):
             if mode == "eval":
                 metrics = {f"eval_{key}": val for key, val in metrics.items()}
             logs = {**logs, **metrics}
-        logs = {**logs, **self._pending_logs}
-        self._pending_logs = {}
         
-        # Now log to trackio with our custom step
-        if self.state is not None and TRACKIO_AVAILABLE and trackio.context_vars.current_run.get() is not None:
+        # Now log to wandb with our custom step
+        if self.state is not None and WANDB_AVAILABLE and wandb.run is not None:
             # Determine which step metric to use
             if self.batch_counts_as_step:
                 step_value = self.state.global_step * self.args.gradient_accumulation_steps
@@ -77,7 +74,7 @@ class CustomGRPOTrainer(GRPOTrainer):
                 step_value = self.state.global_step
             
             try:
-                trackio_logs = {}
+                wandb_logs = {}
                 
                 # Add all train metrics
                 for key, value in logs.items():
@@ -91,16 +88,16 @@ class CustomGRPOTrainer(GRPOTrainer):
                     if isinstance(value, (int, float)):
                         # Prefix with train/ if not already prefixed
                         if not key.startswith("train/") and not key.startswith("eval/"):
-                            trackio_logs[f"train/{key}"] = value
+                            wandb_logs[f"train/{key}"] = value
                         else:
-                            trackio_logs[key] = value
+                            wandb_logs[key] = value
                 
-                # Use step parameter to force trackio to use our step value as the x-axis
-                if trackio_logs:
-                    trackio.log(trackio_logs, step=step_value)
+                # Use step parameter to force wandb to use our step value as the x-axis
+                if wandb_logs:
+                    wandb.log(wandb_logs, step=step_value)
             except Exception as e:
                 # Log error but don't crash training
-                print(f"Warning: Failed to log to trackio at step {step_value}: {e}")
+                print(f"Warning: Failed to log to wandb at step {step_value}: {e}")
         
         # Clear metrics before calling parent (to avoid double logging in parent's log method)
         if hasattr(self, '_metrics') and mode in self._metrics:
@@ -173,11 +170,15 @@ class CustomGRPOTrainer(GRPOTrainer):
             print(f"🎲 Step {self._step_count}: {reward_variance_pct:.0f}% prompts have reward variance, "
                   f"{answer_variance_pct:.0f}% have answer variance ({num_prompts} prompts × {num_gens} gens)")
         
-        # Stash for the next log() call (trackio has no commit=False)
-        self._pending_logs.update({
-            "train/reward_variance_pct": reward_variance_pct,
-            "train/answer_variance_pct": answer_variance_pct,
-        })
+        # Log to wandb
+        if WANDB_AVAILABLE and wandb.run is not None:
+            try:
+                wandb.log({
+                    "train/reward_variance_pct": reward_variance_pct,
+                    "train/answer_variance_pct": answer_variance_pct,
+                }, commit=False)
+            except:
+                pass
         
         # Periodic GPU cleanup
         if self._step_count % 10 == 0:
