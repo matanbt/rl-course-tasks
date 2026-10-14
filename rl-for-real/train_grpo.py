@@ -92,10 +92,11 @@ def _apply_lora(model, model_args, logger):
     lora_dropout = getattr(model_args, 'lora_dropout', 0.05)
     target_modules = getattr(model_args, 'lora_target_modules', None)
     
-    # Handle "all-linear" shortcut
-    if target_modules == "all-linear":
-        target_modules = None  # PEFT will auto-detect all linear layers
-        
+    # "all-linear" (a string from the yaml, a one-element list from the CLI) is PEFT's shorthand for every linear
+    # layer except the output head. None would instead mean PEFT's per-model default: only q_proj/v_proj for Qwen2.
+    if target_modules in ("all-linear", ["all-linear"]):
+        target_modules = "all-linear"
+
     lora_config = LoraConfig(
         r=lora_r,
         lora_alpha=lora_alpha,

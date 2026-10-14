@@ -75,7 +75,7 @@ use_peft: false
 lora_r: 256
 lora_alpha: 256
 lora_dropout: 0.05
-#lora_target_modules: all-linear  # optional: more capacity
+#lora_target_modules: all-linear  # optional: adapt every linear layer (unset = PEFT default, only q_proj/v_proj for Qwen2)
 
 # =============================================================================
 # Evaluation & Checkpointing
