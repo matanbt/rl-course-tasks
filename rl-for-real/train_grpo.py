@@ -145,6 +145,7 @@ def _init_wandb(reasoning_gym_args, training_args, model_args, logger, mode="tra
                 name = f"{name}_eval" if name else "eval"
             
             wandb.init(
+                entity=os.environ.get("WANDB_ENTITY", "rl-4-real"),
                 project=os.environ.get("WANDB_PROJECT", "rl-for-real"),
                 name=name,
                 config=full_config,

@@ -85,7 +85,7 @@ eval_only: false           # Set to true to skip training and only evaluate
 checkpoint_path: null      # Path to trained model/checkpoint for eval-only mode
 
 # Fixed evaluation settings
-eval_num_samples: 120
+eval_num_samples: 200
 eval_num_examples_to_print: 5
 fixed_eval_steps: 100  # Run fixed eval every N steps
 
