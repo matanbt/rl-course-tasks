@@ -14,7 +14,7 @@ run_name: toy_syllogism
 # =============================================================================
 
 dataset_size: 10000
-developer_prompt: DeepSeekZero  # Uses reasoning-gym's built-in prompt
+developer_prompt: Improved  # Strict-format prompt, hosted in grpo/prompts.py (DeepSeekZero is the original)
 developer_role: system
 
 # Training datasets (from reasoning-gym)

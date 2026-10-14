@@ -22,7 +22,7 @@ TRAIN_SAMPLES_PER_TASK = 200
 
 # Settings shown in the report header (looked up on the dataset, training and model args, in that order)
 SETTING_KEYS = [
-    "dataset_size", "datasets", "eval_datasets", "eval_num_samples", "fixed_eval_steps",
+    "developer_prompt", "dataset_size", "datasets", "eval_datasets", "eval_num_samples", "fixed_eval_steps",
     "max_steps", "per_device_train_batch_size", "gradient_accumulation_steps", "num_generations",
     "learning_rate", "lr_scheduler_type", "warmup_steps", "warmup_ratio", "beta", "loss_type",
     "reward_weights", "max_prompt_length", "max_completion_length", "mask_truncated_completions",

@@ -7,9 +7,9 @@ from torch.utils.data import Dataset
 import reasoning_gym
 from reasoning_gym.composite import DatasetSpec
 from reasoning_gym.dataset import ProceduralDataset
-from reasoning_gym.utils import SYSTEM_PROMPTS
 
 from .config import DatasetConfig
+from .prompts import SYSTEM_PROMPTS
 
 
 class ReasoningGymDataset(Dataset):
