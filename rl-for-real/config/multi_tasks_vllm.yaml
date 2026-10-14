@@ -105,6 +105,7 @@ checkpoint_path: null      # Path to trained model/checkpoint for eval-only mode
 eval_num_samples: 200
 eval_num_examples_to_print: 5
 fixed_eval_steps: 20  # Run fixed eval every N steps (a multiple of logging_steps: evals run on logging steps)
+save_best_k: 3  # keep the 3 best checkpoints by fixed-eval accuracy in <output_dir>/best_checkpoints/
 
 # Variance logging (helps diagnose exploration)
 log_reward_variance: true
@@ -115,7 +116,7 @@ verbose_variance_logging: false  # Set to true for detailed per-prompt output
 #eval_delay: 0
 
 save_strategy: steps
-save_steps: 1000
+save_steps: 100  # resumable checkpoints (with optimizer state); keep below max_steps
 save_total_limit: 3
 
 logging_steps: 10

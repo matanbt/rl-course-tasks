@@ -41,6 +41,7 @@ class DatasetConfig:
     eval_num_samples: int = field(default=30)
     eval_num_examples_to_print: int = field(default=3)
     fixed_eval_steps: int = field(default=50)
+    save_best_k: int = field(default=0)  # If > 0, keep the k checkpoints with the best fixed-eval accuracy in <output_dir>/best_checkpoints/
     
     # Variance logging
     log_reward_variance: bool = field(default=True)

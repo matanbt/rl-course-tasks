@@ -4,6 +4,7 @@ import json
 import logging
 import os
 import re
+import shutil
 
 import torch
 import torch.distributed as dist
@@ -53,6 +54,7 @@ class FixedEvalCallback(TrainerCallback):
         eval_steps: int = 50,
         temperature: float = 0.6,
         eval_batch_size: int = 16,
+        save_best_k: int = 0,
     ):
         self.tokenizer = tokenizer
         self.num_samples = min(num_samples, len(eval_dataset))
@@ -64,6 +66,9 @@ class FixedEvalCallback(TrainerCallback):
         self.temperature = temperature
         self.do_sample = temperature > 0
         self.eval_batch_size = eval_batch_size
+        self.save_best_k = save_best_k
+        self.best_dir = os.path.join(output_dir, "best_checkpoints") if output_dir else None
+        self.best = self._load_best_index()  # [{"step", "accuracy", "path"}], best first
         
         # Store the underlying procedural dataset for proper scoring
         self.procedural_dataset = eval_dataset.data
@@ -132,7 +137,42 @@ class FixedEvalCallback(TrainerCallback):
         self._log_to_wandb(results, step)
         self._save_results(results, step)
         self._print_results(results, step)
+        self._maybe_save_best(model, results, step)
         torch.cuda.empty_cache()
+
+    def _load_best_index(self) -> list[dict]:
+        """Read the kept best checkpoints back (so resumed runs keep ranking against them)."""
+        if self.best_dir is None:
+            return []
+        index_path = os.path.join(self.best_dir, "index.json")
+        if not os.path.exists(index_path):
+            return []
+        with open(index_path, encoding="utf-8") as f:
+            return [b for b in json.load(f) if os.path.isdir(b["path"])]
+
+    def _maybe_save_best(self, model, results: dict, step: int):
+        """Keep the save_best_k checkpoints with the highest eval accuracy in <output_dir>/best_checkpoints/."""
+        if self.save_best_k <= 0 or self.best_dir is None or not _is_main_process():
+            return
+        accuracy = results["accuracy"]
+        # Ties keep the earlier checkpoint
+        if len(self.best) >= self.save_best_k and accuracy <= self.best[-1]["accuracy"]:
+            return
+
+        path = os.path.join(self.best_dir, f"step_{step}")
+        model.save_pretrained(path)  # a PEFT model saves just its adapter
+        self.tokenizer.save_pretrained(path)
+        self.best = [b for b in self.best if b["step"] != step]
+        self.best.append({"step": step, "accuracy": accuracy, "path": path})
+        self.best.sort(key=lambda b: (-b["accuracy"], b["step"]))
+        for dropped in self.best[self.save_best_k:]:
+            shutil.rmtree(dropped["path"], ignore_errors=True)
+        self.best = self.best[:self.save_best_k]
+
+        with open(os.path.join(self.best_dir, "index.json"), "w", encoding="utf-8") as f:
+            json.dump(self.best, f, indent=2)
+        kept = ", ".join(f"step {b['step']} ({b['accuracy']:.1f}%)" for b in self.best)
+        self.logger.info(f"💾 Saved best checkpoint {path} | kept: {kept}")
     
     def _evaluate(self, model, step: int) -> dict:
         """Evaluate model on fixed samples using batched generation."""
